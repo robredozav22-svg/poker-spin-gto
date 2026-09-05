@@ -1,66 +1,85 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "2.0",
+  "recovered_project_baseline": {
+    "app": "V43_EFFECTIVE_STACK_ONLY",
+    "rfi_audit": "V41_ALL_CHARTS_REAUDIT",
+    "range_sanity_audit": "V42_ALL_RANGES_SANITY_AUDIT",
+    "tree_engine_baseline": "V37_LEGAL_PREFLOP_STATE_MACHINE",
+    "allin_legality_baseline": "V40_ASYMMETRIC_BRANCH_AUDIT"
+  },
   "strategy_target": {
     "game": "spin_and_go",
     "players": 3,
     "baseline_payout_profile": "WTA",
     "stack_unit": "bb",
-    "use_case": "study_and_review_only"
+    "visible_stack_model": "EFFECTIVE_STACK_ONLY",
+    "stack_step_bb": 0.5,
+    "use_case": "study_and_recorded_hand_review_only"
   },
   "policy": {
     "primary_solver": "GTO Wizard Spin & Go",
+    "primary_solver_documented_regular_depth_max_bb": 33,
+    "primary_solver_documented_ante_depth_max_bb": 25,
     "allow_interpolation": false,
     "allow_unverified_ranges_in_app": false,
     "require_previous_action_context": true,
     "require_per_hand_action_frequencies_for_verified_exact": true,
-    "separate_multi_place_payout_icm_profile": true
+    "separate_multi_place_payout_icm_profile": true,
+    "source_grade_B_is_not_exact_solver_frequency": true,
+    "preserve_mixed_source_cells": true,
+    "no_silent_node_substitution": true,
+    "no_silent_asymmetric_to_equal_stack_promotion": true
+  },
+  "source_grades": {
+    "A": "explicit published structured range, approved exact export, or matching Nash source",
+    "B": "source-constrained public aggregate/envelope; mixed per-hand allocation reconstructed under explicit constraints; not exact solver frequency",
+    "M": "model/reference, asymmetric or nearest-depth proxy, or complex response without exact approved per-hand export",
+    "G": "exploit/legacy Gold/population adjustment",
+    "MISSING_EXACT": "legal branch exists but exact approved chart source is unavailable"
   },
   "sources": [
     {
       "tier": 1,
       "name": "GTO Wizard Spin & Go",
-      "role": "primary_solver",
-      "url": "https://gtowizard.com/"
+      "role": "primary_solver_reference",
+      "url": "https://gtowizard.com/",
+      "notes": "Regular Spin documented up to 33bb; Spin+Ante up to 25bb; multiple SB sizing trees; 600+ asymmetric stack situations documented."
     },
     {
       "tier": 2,
       "name": "PokerStars Learn Spin & Go",
-      "role": "independent_structure_crosscheck",
+      "role": "explicit_public_call_nash_and_structure_crosscheck",
       "url": "https://www.pokerstars.com/poker/learn/strategies/spin-go-preflop-in-the-big-blind/"
     },
     {
       "tier": 3,
-      "name": "PreflopRanges.app Spin & Go solved charts",
-      "role": "public_text_and_aggregate_crosscheck",
+      "name": "PreflopRanges.app Spin solved charts",
+      "role": "public_opening_aggregate_and_envelope_crosscheck",
       "url": "https://preflopranges.app/charts/spins/"
     },
     {
       "tier": 4,
       "name": "GGPoker Spin & Gold",
-      "role": "format_check_only",
+      "role": "format_rules_sanity_only",
       "url": "https://ggpoker.com/poker-games/spin-gold/"
+    },
+    {
+      "tier": 5,
+      "name": "Legacy Gold / field model",
+      "role": "separate_exploit_layer_only"
     }
   ],
   "existing_main_data_status": "INVALID_FOR_STRATEGY",
-  "first_in_audit": [
-    {"stack_bb":8,"position":"BTN","status":"CROSS_CHECKED","actions_pct":{"jam":34.3,"fold":65.7}},
-    {"stack_bb":8,"position":"SB","status":"CROSS_CHECKED","actions_pct":{"jam":52.6,"raise":6.0,"limp":6.5,"fold":35.0}},
-    {"stack_bb":10,"position":"BTN","status":"CROSS_CHECKED","actions_pct":{"jam":26.6,"raise":7.5,"fold":65.9}},
-    {"stack_bb":10,"position":"SB","status":"CROSS_CHECKED","actions_pct":{"jam":41.7,"raise":16.5,"limp":0.8,"fold":41.0}},
-    {"stack_bb":12,"position":"BTN","status":"MISSING_EXACT"},
-    {"stack_bb":12,"position":"SB","status":"MISSING_EXACT"},
-    {"stack_bb":15,"position":"BTN","status":"CROSS_CHECKED","actions_pct":{"jam":7.7,"raise":24.4,"fold":67.9}},
-    {"stack_bb":15,"position":"SB","status":"CROSS_CHECKED","actions_pct":{"jam":19.5,"raise":26.5,"limp":16.0,"fold":38.0}},
-    {"stack_bb":20,"position":"BTN","status":"PARTIAL","played_pct":34.7,"note":"exact action split pending primary solver tree extraction"},
-    {"stack_bb":20,"position":"SB","status":"CROSS_CHECKED","actions_pct":{"jam":7.4,"raise":33.9,"limp":22.8,"fold":35.9}},
-    {"stack_bb":25,"position":"BTN","status":"CROSS_CHECKED","actions_pct":{"raise":38.1,"fold":61.9}},
-    {"stack_bb":25,"position":"SB","status":"CROSS_CHECKED","actions_pct":{"jam":1.7,"raise":35.6,"limp":27.1,"fold":35.6}}
-  ],
+  "audited_anchor_file": "data/source-verified-anchors.json",
+  "validator": "scripts/validate-chart-data.mjs",
   "required_response_families": [
     "SB_vs_BTN_raise",
     "SB_vs_BTN_jam",
     "BB_vs_BTN_raise_after_SB_fold",
-    "BB_vs_BTN_raise_after_SB_call_or_raise_when_applicable",
+    "BB_vs_BTN_raise_after_SB_call",
+    "BB_vs_BTN_raise_after_SB_3bet",
+    "BB_vs_BTN_raise_after_SB_jam",
+    "BB_vs_BTN_limp_after_SB_action",
     "BB_vs_BTN_jam",
     "BB_vs_SB_raise",
     "BB_vs_SB_limp",
@@ -69,13 +88,18 @@
     "BTN_response_to_SB_jam",
     "BTN_response_to_BB_3bet",
     "BTN_response_to_BB_jam",
-    "SB_response_after_BTN_open_and_BB_action_where_applicable"
+    "reopened_raise_and_short_allin_responses"
   ],
-  "verification_states": [
-    "VERIFIED_EXACT",
-    "CROSS_CHECKED",
-    "PARTIAL",
-    "MISSING_EXACT",
-    "INVALID_FOR_STRATEGY"
+  "hard_invariants": [
+    "169 unique starting hand classes",
+    "1326 total starting combinations",
+    "all exact cell action frequencies sum to 100 percent",
+    "RFI aggregate combo totals equal the audited V41 targets",
+    "offsuit CALL cannot coexist with suited FOLD for the same ranks in call-vs-jam charts",
+    "mixed source cells remain mixed",
+    "no stack interpolation without an explicitly labelled proxy",
+    "no different action node substituted for a missing exact node",
+    "chart shown only on Hero decision states",
+    "missing exact source is surfaced instead of guessed"
   ]
 }
