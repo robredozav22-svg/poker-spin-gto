@@ -1,111 +1,87 @@
-# Spin & Go chart audit
+# Spin & Go chart audit — recovered baseline
 
-Status: active verification. Do not treat the ranges currently embedded in `main/index.html` as source-of-truth.
+Status: active verification. The simplified `main/index.html` is **not** a strategy source and remains `INVALID_FOR_STRATEGY`.
 
-## Target format
+## What was recovered from the project history
 
-- Game: 3-max Spin & Go / GGPoker Spin & Gold
-- Primary use: preflop study / video and hand-history review
-- Baseline mode: standard winner-take-all / ChipEV-like 3-max spots
-- Stack key: effective stack in big blinds
-- Important exception: high multipliers that pay multiple places require a separate ICM profile; they must not silently reuse the WTA baseline.
+The project had already progressed far beyond the current `main` before the GitHub simplification:
 
-## Source hierarchy
+- **V37** — legal preflop state machine instead of a finite list of generic spot buttons.
+- **V40** — all-in/reopen legality and asymmetric-stack safety audit.
+- **V41** — all ten public 3-max BTN/SB opening anchors at 8/10/15/20/25bb rebuilt and checked against exact published aggregate combo totals.
+- **V42** — all-range sanity pass; fixed shorthand parsing that could create offsuit CALL + suited FOLD contradictions; rebuilt public call-vs-jam ranges; zero suited-over-offsuit violations across audited anchors.
+- **V43** — final recovered UX rule: one visible `EFF BB` selector, 0.5bb steps, one-screen replay/study workflow.
 
-1. **GTO Wizard Spin & Go solutions** — primary solver reference. GTO Wizard documents Spin solutions across 1-25bb, all spots, multiple sizings and asymmetric stacks; preflop solutions are free. Their published solution status reports high-accuracy Spin solutions.
-2. **PokerStars Learn Spin & Go lessons** — independent structural cross-check for effective-stack logic, open sizes and response branches.
-3. **PreflopRanges.app Spin & Go solved charts** — extraction/cross-check source for public text ranges and aggregate frequencies at 8/10/15/20/25bb. Do not promote a hand-level mixed strategy to VERIFIED_EXACT until matched to the selected primary solver tree.
-4. **GGPoker official format pages/articles** — format sanity check only, not exact GTO range source.
+See `docs/RECOVERED_PROJECT_BASELINE.md` for the preserved product/engine rules.
 
-## Current GitHub findings
+## Current source hierarchy
 
-`main/index.html` is not trustworthy as a strategy source:
+1. **GTO Wizard Spin & Go** — primary solver reference. Current GTO Wizard material documents regular Spin study depths up to 33bb, Spin+Ante to 25bb, multiple SB opening-size trees, and 600+ asymmetric-stack situations.
+2. **PokerStars Learn Spin & Go** — explicit public call/Nash ranges and independent structural cross-check.
+3. **Public solved Spin opening sources** — aggregate action totals and source envelopes for cross-checking BTN/SB first-in anchors.
+4. **GGPoker official format material** — format/rules sanity only, not exact range source.
+5. **Legacy Gold / field models** — exploit layer only, never silently labelled GTO.
 
-- only 8bb and 15bb data blocks are actually present, while UI exposes additional stack buttons;
-- many BTN/SB RFI and push/fold arrays expand to nearly/all 169 hand classes;
-- many `3bet` arrays are effectively all hands;
-- the data model has no previous-action context, so a generic `3bet` cannot distinguish SB vs BTN open, BB vs BTN open, BB vs SB raise, response to limp, response to shove, etc.;
-- the renderer is binary raise/fold and cannot represent limp, call, jam, small 3-bet or mixed frequencies.
+## Audited 3-max RFI aggregate combo targets
 
-Therefore existing embedded ranges are marked **INVALID_FOR_STRATEGY**.
+The full 1326 starting combinations are distributed as follows. These are the V41 targets and all rows sum exactly to 1326.
 
-## Cross-checked first-in opening baselines
+| Stack | Position | JAM | RAISE | LIMP | FOLD |
+|---:|:---:|---:|---:|---:|---:|
+| 8 | BTN | 455 | 0 | 0 | 871 |
+| 10 | BTN | 353 | 99 | 0 | 874 |
+| 15 | BTN | 102 | 323 | 0 | 901 |
+| 20 | BTN | 0 | 461 | 0 | 865 |
+| 25 | BTN | 0 | 505 | 0 | 821 |
+| 8 | SB | 697 | 79 | 86 | 464 |
+| 10 | SB | 554 | 218 | 11 | 543 |
+| 15 | SB | 258 | 352 | 212 | 504 |
+| 20 | SB | 98 | 449 | 302 | 477 |
+| 25 | SB | 22 | 472 | 360 | 472 |
 
-These values are recorded as audit checkpoints, not yet as final hand-level production data.
+Important: these totals do **not** magically make every per-hand mixed frequency solver-exact. V41/V42 grade these rebuilt opening matrices as source-constrained `B`: aggregate totals and source envelopes are enforced, while mixed per-hand allocation is reconstructed under those constraints.
 
-| Stack | Seat | Aggregate strategy checkpoint | Status |
-|---|---|---|---|
-| 8bb | BTN | jam 34.3%, fold 65.7% | CROSS_CHECKED |
-| 8bb | SB | jam 52.6%, raise 6.0%, limp 6.5%, fold 35.0% | CROSS_CHECKED |
-| 10bb | BTN | jam 26.6%, raise 7.5%, fold 65.9% | CROSS_CHECKED |
-| 10bb | SB | jam 41.7%, raise 16.5%, limp 0.8%, fold 41.0% | CROSS_CHECKED |
-| 15bb | BTN | jam 7.7%, raise 24.4%, fold 67.9% | CROSS_CHECKED |
-| 15bb | SB | jam 19.5%, raise 26.5%, limp 16.0%, fold 38.0% | CROSS_CHECKED |
-| 20bb | BTN | total played about 34.7%, primarily 2bb raise; exact action split pending primary-tree extraction | PARTIAL |
-| 20bb | SB | jam 7.4%, raise 33.9% to 2.5bb, limp 22.8%, fold 35.9% | CROSS_CHECKED |
-| 25bb | BTN | raise 38.1% to 2bb, fold 61.9% | CROSS_CHECKED |
-| 25bb | SB | jam 1.7%, raise 35.6% to 2.8bb, limp 27.1%, fold 35.6% | CROSS_CHECKED |
-| 12bb | BTN/SB | exact selected-tree chart not yet extracted | MISSING_EXACT |
+## Explicit public call-vs-open-shove anchors
 
-## Public text range checkpoints
+The approved public range text and combo counts are frozen in `data/source-verified-anchors.json`.
 
-### BTN 8bb — pure jam checkpoint
+Families covered:
+- 3-max BB vs BTN open-shove after SB fold: 10 / 15 / 25bb;
+- 3-max BB vs SB open-shove after BTN fold: 10 / 15 / 25bb;
+- 3-max SB vs BTN open-shove: 11 / 25bb;
+- HU BB vs BTN open-shove: 10 / 13 / 25bb.
 
-`22+, A2s+, K4s+, Q8s+, J8s+, T7s+, 97s+, 86s+, 76s+, 65s+, A2o+, K9o+, QTo+, JTo+`
+V42 rebuilt these from their public source definitions and enforces the dominance invariant: if the offsuit version of the same ranks is a CALL, the suited version cannot be FOLD.
 
-### BTN 15bb — pure played checkpoint (action mix still matters)
+## Why the current `main` ranges are rejected
 
-`22+, A3s+, K5s+, Q7s+, J8s+, T7s+, 97s+, 87s+, A6o+, K9o+, QTo+, JTo+`
+The simplified `main/index.html`:
+- contains only partial stack data while exposing more stack buttons;
+- has many ranges that expand to nearly/all 169 hand classes;
+- uses generic `3bet`/`defend` contexts instead of the prior action tree;
+- cannot correctly represent limp/call/raise/jam mixed frequencies;
+- lost source grades and the distinction between exact/source-constrained/model/exploit data.
 
-### BTN 25bb — pure open-raise checkpoint
+This is a regression relative to V41–V43, not the baseline we should continue from.
 
-`44+, A2s+, K4s+, Q5s+, J6s+, T6s+, 96s+, 85s+, 75s+, 65s+, 54s+, A7o+, A5o, K9o+, Q9o+, JTo+, T9o+`
+## Required final data key
 
-These are used to detect gross data corruption. They are not a substitute for the full mixed-frequency matrix.
-
-## Response-tree facts independently checked
-
-PokerStars' current Spin & Go material confirms that the correct model must branch by exact previous action:
-
-- SB vs BTN raise is mostly 3-bet / jam / fold, with shallower stacks moving increasingly to jam/fold;
-- BB vs BTN raise has very wide calls plus jam/small-3bet components depending on depth;
-- BB vs BTN open shove has a separate call range;
-- BB vs SB raise has its own call/jam/fold strategy and depends on SB sizing;
-- BB vs SB limp has depth-dependent raise sizing and check/jam branches;
-- BB vs SB open shove has a separate call range.
-
-This means a single global `3bet` or `defend` chart is structurally wrong.
-
-## Required chart key
-
-Every final range must be addressable by at least:
+Every approved chart must be addressable by enough context to identify the actual poker node, e.g.:
 
 `format -> payout_profile -> effective_stack -> hero_position -> previous_actions -> villain_position -> villain_size -> hero_actions -> hand -> frequencies`
 
-Example:
+A missing exact node must remain `MISSING_EXACT`; it must not be replaced by a superficially similar branch such as using `BB vs SB open jam` for `BTN raise -> SB jam -> BB cold decision`.
 
-`spin3max -> WTA -> 15bb -> BB -> BTN_RAISE_2BB_SB_FOLD -> BTN -> 2bb -> {fold,call,jam,raise} -> A5s -> frequencies`
+## Grade policy
 
-## Verification states
+- `A / VERIFIED_EXACT` — explicit published structured range, approved exact export, or matching Nash source.
+- `B / SOURCE_CONSTRAINED` — public aggregate/envelope plus constrained mixed reconstruction; **not exact per-hand solver frequency**.
+- `M / MODEL_REFERENCE` — model, asymmetric/nearest-depth proxy, or complex response without exact approved export.
+- `G / EXPLOIT` — field/Gold/population adjustment.
+- `MISSING_EXACT` — legal node exists, exact approved chart unavailable.
 
-- `VERIFIED_EXACT`: selected primary solver tree and exact per-hand frequencies checked.
-- `CROSS_CHECKED`: aggregate/text range agrees across strong independent sources but exact mixed matrix is not yet extracted from primary tree.
-- `PARTIAL`: only part of the strategy has been independently verified.
-- `MISSING_EXACT`: we know the spot is required but do not yet have an exact approved chart.
-- `INVALID_FOR_STRATEGY`: current data is demonstrably unsuitable and must not be served as GTO advice.
+## Regression gate
 
-## Sources
+Run `node scripts/validate-chart-data.mjs` whenever chart data changes. The gate checks the 169-hand/1326-combo universe, V41 aggregate anchors, exact-chart metadata/frequency sums, no silent interpolation, valid action vocabulary, and the V42 suited-over-offsuit CALL invariant.
 
-- https://gtowizard.com/
-- https://blog.gtowizard.com/status-and-info-about-our-solutions/
-- https://blog.gtowizard.com/new-spins-solutions-study-plans-and-ev-comparison/
-- https://www.pokerstars.com/poker/learn/strategies/spin-go-preflop-on-the-button/
-- https://www.pokerstars.com/poker/learn/strategies/spin-go-preflop-in-the-small-blind/
-- https://www.pokerstars.com/poker/learn/strategies/spin-go-preflop-in-the-big-blind/
-- https://preflopranges.app/charts/spins/
-- https://ggpoker.com/poker-games/spin-gold/
-- https://ggpoker.com/blog/ggpoker-spin-gold-strategy/
-
-## Next gate before changing strategy data
-
-Do **not** replace `DATA` with guessed or rounded ranges. First extract and freeze the exact primary-solver matrices for the required branches, beginning with 8/10/15/20/25bb BTN/SB first-in and BB/SB responses to BTN action. Only after that should the app consume the new data files.
+**No guessed range is promoted into the GTO baseline.**
