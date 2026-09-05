@@ -1,0 +1,81 @@
+{
+  "schema_version": "1.0",
+  "strategy_target": {
+    "game": "spin_and_go",
+    "players": 3,
+    "baseline_payout_profile": "WTA",
+    "stack_unit": "bb",
+    "use_case": "study_and_review_only"
+  },
+  "policy": {
+    "primary_solver": "GTO Wizard Spin & Go",
+    "allow_interpolation": false,
+    "allow_unverified_ranges_in_app": false,
+    "require_previous_action_context": true,
+    "require_per_hand_action_frequencies_for_verified_exact": true,
+    "separate_multi_place_payout_icm_profile": true
+  },
+  "sources": [
+    {
+      "tier": 1,
+      "name": "GTO Wizard Spin & Go",
+      "role": "primary_solver",
+      "url": "https://gtowizard.com/"
+    },
+    {
+      "tier": 2,
+      "name": "PokerStars Learn Spin & Go",
+      "role": "independent_structure_crosscheck",
+      "url": "https://www.pokerstars.com/poker/learn/strategies/spin-go-preflop-in-the-big-blind/"
+    },
+    {
+      "tier": 3,
+      "name": "PreflopRanges.app Spin & Go solved charts",
+      "role": "public_text_and_aggregate_crosscheck",
+      "url": "https://preflopranges.app/charts/spins/"
+    },
+    {
+      "tier": 4,
+      "name": "GGPoker Spin & Gold",
+      "role": "format_check_only",
+      "url": "https://ggpoker.com/poker-games/spin-gold/"
+    }
+  ],
+  "existing_main_data_status": "INVALID_FOR_STRATEGY",
+  "first_in_audit": [
+    {"stack_bb":8,"position":"BTN","status":"CROSS_CHECKED","actions_pct":{"jam":34.3,"fold":65.7}},
+    {"stack_bb":8,"position":"SB","status":"CROSS_CHECKED","actions_pct":{"jam":52.6,"raise":6.0,"limp":6.5,"fold":35.0}},
+    {"stack_bb":10,"position":"BTN","status":"CROSS_CHECKED","actions_pct":{"jam":26.6,"raise":7.5,"fold":65.9}},
+    {"stack_bb":10,"position":"SB","status":"CROSS_CHECKED","actions_pct":{"jam":41.7,"raise":16.5,"limp":0.8,"fold":41.0}},
+    {"stack_bb":12,"position":"BTN","status":"MISSING_EXACT"},
+    {"stack_bb":12,"position":"SB","status":"MISSING_EXACT"},
+    {"stack_bb":15,"position":"BTN","status":"CROSS_CHECKED","actions_pct":{"jam":7.7,"raise":24.4,"fold":67.9}},
+    {"stack_bb":15,"position":"SB","status":"CROSS_CHECKED","actions_pct":{"jam":19.5,"raise":26.5,"limp":16.0,"fold":38.0}},
+    {"stack_bb":20,"position":"BTN","status":"PARTIAL","played_pct":34.7,"note":"exact action split pending primary solver tree extraction"},
+    {"stack_bb":20,"position":"SB","status":"CROSS_CHECKED","actions_pct":{"jam":7.4,"raise":33.9,"limp":22.8,"fold":35.9}},
+    {"stack_bb":25,"position":"BTN","status":"CROSS_CHECKED","actions_pct":{"raise":38.1,"fold":61.9}},
+    {"stack_bb":25,"position":"SB","status":"CROSS_CHECKED","actions_pct":{"jam":1.7,"raise":35.6,"limp":27.1,"fold":35.6}}
+  ],
+  "required_response_families": [
+    "SB_vs_BTN_raise",
+    "SB_vs_BTN_jam",
+    "BB_vs_BTN_raise_after_SB_fold",
+    "BB_vs_BTN_raise_after_SB_call_or_raise_when_applicable",
+    "BB_vs_BTN_jam",
+    "BB_vs_SB_raise",
+    "BB_vs_SB_limp",
+    "BB_vs_SB_jam",
+    "BTN_response_to_SB_3bet",
+    "BTN_response_to_SB_jam",
+    "BTN_response_to_BB_3bet",
+    "BTN_response_to_BB_jam",
+    "SB_response_after_BTN_open_and_BB_action_where_applicable"
+  ],
+  "verification_states": [
+    "VERIFIED_EXACT",
+    "CROSS_CHECKED",
+    "PARTIAL",
+    "MISSING_EXACT",
+    "INVALID_FOR_STRATEGY"
+  ]
+}
