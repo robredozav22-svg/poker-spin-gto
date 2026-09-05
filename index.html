@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spin & Go GTO Калькулятор</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #1a1a2e; color: #fff; font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; min-height: 100vh; }
+        .header { background: linear-gradient(135deg, #16213e, #0f3460); padding: 15px; border-radius: 10px; margin-bottom: 20px; text-align: center; }
+        .header h1 { margin: 0; font-size: 28px; background: linear-gradient(90deg, #e94560, #0f3460); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; background: #16213e; padding: 20px; border-radius: 10px; margin-bottom: 20px; }
+        label { display: block; margin-bottom: 5px; color: #aaa; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+        select, input { width: 100%; background: #0f3460; color: #fff; border: 2px solid #1a1a2e; padding: 10px; border-radius: 5px; font-size: 14px; }
+        button { width: 100%; background: linear-gradient(135deg, #e94560, #c23152); color: #fff; border: none; padding: 12px; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.3s; }
+        button:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(233, 69, 96, 0.4); }
+        .result { background: #16213e; padding: 20px; border-radius: 10px; margin-top: 20px; text-align: center; border: 2px solid #e94560; }
+        .result .action { font-size: 36px; font-weight: bold; margin: 10px 0; }
+        .result .details { color: #888; font-size: 14px; }
+        .legend { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 15px; padding: 10px; background: #0f3460; border-radius: 5px; }
+        .legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; }
+        .legend-color { width: 15px; height: 15px; border-radius: 3px; }
+        #chartGrid { display: grid; grid-template-columns: repeat(13, 1fr); gap: 2px; background: #0f3460; padding: 5px; border-radius: 5px; }
+        .cell { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 9px; cursor: pointer; border-radius: 3px; font-weight: bold; transition: all 0.2s; }
+        .cell:hover { transform: scale(1.1); z-index: 10; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5); }
+        .raise { background: linear-gradient(135deg, #ff6b6b, #ee5a24); color: #fff; }
+        .call { background: linear-gradient(135deg, #4a69bd, #1e3799); color: #fff; }
+        .fold { background: #2d3436; color: #636e72; }
+        .mixed { background: linear-gradient(135deg, #f39c12, #e67e22); color: #000; }
+        .allin { background: linear-gradient(135deg, #8e44ad, #6c3483); color: #fff; }
+        .selected { border: 3px solid #fff !important; box-shadow: 0 0 15px #fff; }
+        .hint { font-size: 11px; color: #636e72; text-align: center; margin-top: 10px; }
+        .fullscreen-btn { background: #4a69bd; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎯 SPIN & GO GTO КАЛЬКУЛЯТОР</h1>
+        <small>Профессиональный инструмент для 3-max</small>
+    </div>
+
+    <div class="controls">
+        <div>
+            <label>Стек (BB):</label>
+            <select id="stack" onchange="updateChart()">
+                <option value="10">10 BB</option>
+                <option value="15" selected>15 BB</option>
+                <option value="20">20 BB</option>
+                <option value="25">25 BB</option>
+                <option value="30">30 BB</option>
+            </select>
+        </div>
+        <div>
+            <label>Позиция:</label>
+            <select id="position" onchange="updateChart()">
+                <option value="BTN" selected>BTN (Кнопка)</option>
+                <option value="SB">SB (Малый блайнд)</option>
+                <option value="BB">BB (Большой блайнд)</option>
+            </select>
+        </div>
+        <div>
+            <label>Рука:</label>
+            <input type="text" id="hand" placeholder="Например: AKs, QQ, AJo" maxlength="4" onkeypress="if(event.key==='Enter')analyze()">
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <button onclick="analyze()">Рассчитать</button>
+            <button class="fullscreen-btn" onclick="toggleFullscreen()">⛶ Полный экран</button>
+        </div>
+    </div>
+
+    <div class="result" id="result">
+        <div style="color: #888">Введите карты или выберите из таблицы</div>
+    </div>
+
+    <div class="legend">
+        <div class="legend-item"><div class="legend-color" style="background: #ff6b6b"></div>Рейз/Олл-ин</div>
+        <div class="legend-item"><div class="legend-color" style="background: #4a69bd"></div>Колл</div>
+        <div class="legend-item"><div class="legend-color" style="background: #2d3436"></div>Фолд</div>
+        <div class="legend-item"><div class="legend-color" style="background: #f39c12"></div>Микс</div>
+    </div>
+
+    <div id="chartGrid"></div>
+    <div class="hint">💡 Кликните на ячейку для быстрого выбора руки</div>
+
+    <script>
+        const ranks = ['A', 'K', 'Q', 'J', 'T', '9', '8', '7', '6', '5', '4', '3', '2'];
+        const allHands = [];
+        for (let i = 0; i < ranks.length; i++) {
+            for (let j = i; j < ranks.length; j++) {
+                if (i === j) allHands.push(ranks[i] + ranks[j]);
+                else {
+                    allHands.push(ranks[i] + ranks[j] + 's');
+                    allHands.push(ranks[i] + ranks[j] + 'o');
+                }
+            }
+        }
+
+        const DATA = {
+            '10': {
+                BTN: {
+                    raise: ['AA', 'KK', 'QQ', 'JJ', 'TT', '99', '88', '77', '66', '55', '44', '33', '22', 'AKs', 'AQs', 'AJs', 'ATs', 'A9s', 'A8s', 'A5s', 'A4s', 'A3s', 'A2s', 'KQs', 'KJs', 'KTs', 'QJs', 'QTs', 'JTs', 'T9s', '98s', '87s', '76s', '65s', '54s', 'AKo', 'AQo', 'AJo', 'ATo', 'KQo', 'KJo'],
+                    call: [],
+                    allin: ['A7s', 'A6s', 'K9s', 'K8s', 'K7s', 'K6s', 'K5s', 'K4s', 'K3s', 'K2s', 'Q9s', 'Q8s', 'Q7s', 'Q6s', 'Q5s', 'Q4s', 'Q3s', 'Q2s', 'J9s', 'J8s', 'J7s', 'J6s', 'J5s', 'J4s', 'J3s', 'J2s', 'T8s', 'T7s', 'T6s', 'T5s', 'T4s', 'T3s', 'T2s', '97s', '96s', '95s', '94s', '93s', '92s', '86s', '85s', '84s', '83s', '82s', '75s', '74s', '73s', '72s', '64s', '63s', '62s', '53s', '52s', '43s', '42s', '32s', 'A9o', 'A8o', 'A7o', 'A6o', 'A5o', 'A4o', 'A3o', 'A2o', 'K9o', 'K8o', 'K7o', 'K6o', 'K5o', 'K4o', 'K3o', 'K2o', 'Q9o', 'Q8o', 'Q7o', 'Q6o', 'Q5o', 'Q4o', 'Q3o', 'Q2o', 'J9o', 'J8o', 'J7o', 'J6o', 'J5o', 'J4o', 'J3o', 'J2o', 'T9o', 'T8o', 'T7o', 'T6o', 'T5o', 'T4o', 'T3o', 'T2o', '98o', '97o', '96o', '95o', '94o', '93o', '92o', '87o', '86o', '85o', '84o', '83o', '82o', '76o', '75o', '74o', '73o', '72o', '65o', '64o', '63o', '62o', '54o', '53o', '52o', '43o', '42o', '32o']
+                },
+                SB: {
+                    raise: ['AA', 'KK', 'QQ', 'JJ', 'TT', '99', '88', '77', '66', '55', '44', '33', '22', 'AKs', 'AQs', 'AJs', 'ATs', 'A9s', 'A8s', 'A7s', 'A6s', 'A5s', 'A4s', 'A3s', 'A2s', 'KQs', 'KJs', 'KTs', 'K9s', 'K8s', 'K7s', 'K6s', 'K5s', 'K4s', 'K3s', 'K2s', 'QJs', 'QTs', 'Q9s', 'Q8s', 'Q7s', 'Q6s', 'Q5s', 'Q4s', 'Q3s', 'Q2s', 'JTs', 'J9s', 'J8s', 'J7s', 'J6s', 'J5s', 'J4s', 'J3s', 'J2s', 'T9s', 'T8s', 'T7s', 'T6s', '98s', '97s', '96s', '95s', '87s', '86s', '85s', '84s', '76s', '75s', '74s', '73s', '65s', '64s', '63s', '62s', '54s', '53s', '52s', '43s', '42s', '32s', 'AKo', 'AQo', 'AJo', 'ATo', 'A9o', 'A8o', 'A7o', 'A6o', 'A5o', 'A4o', 'A3o', 'A2o', 'KQo', 'KJo', 'KTo', 'K9o', 'K8o', 'K7o', 'K6o', 'K5o', 'K4o', 'K3o', 'K2o', 'QJo', 'QTo', 'Q9o', 'Q8o', 'Q7o', 'Q6o', 'Q5o', 'Q4o', 'Q3o', 'Q2o', 'JTo', 'J9o', 'J8o', 'J7o', 'J6o', 'J5o', 'J4o', 'J3o', 'J2o', 'T9o', 'T8o', 'T7o', 'T6o', '98o', '97o', '96o', '95o', '87o', '86o', '85o', '84o', '76o', '75o', '74o', '73o', '65o', '64o', '63o', '62o', '54o', '53o', '52o', '43o', '42o', '32o'],
+                    call: [],
+                    allin: []
+                },
+                BB: {
+                    raise: ['AA', 'KK', 'QQ', 'JJ', 'TT', '99', '88', '77', '66', '55', '44', '33', '22', 'AKs', 'AQs', 'AJs', 'ATs', 'A9s', 'A8s', 'A7s', 'A6s', 'A5s', 'A4s', 'A3s', 'A2s', 'KQs', 'KJs', 'KTs', 'K9s', 'K8s', 'K7s', 'K6s', 'K5s', 'K4s', 'K3s', 'K2s', 'QJs', 'QTs', 'Q9s', 'Q8s', 'Q7s', 'Q6s', 'Q5s', 'Q4s', 'Q3s', 'Q2s', 'JTs', 'J9s', 'J8s', 'J7s', 'J6s', 'J5s', 'J4s', 'J3s', 'J2s', 'T9s', 'T8s', 'T7s', 'T6s', '98s', '97s', '96s', '95s', '87s', '86s', '85s', '84s', '76s', '75s', '74s', '73s', '65s', '64s', '63s', '62s', '54s', '53s', '52s', '43s', '42s', '32s', 'AKo', 'AQo', 'AJo', 'ATo', 'A9o', 'A8o', 'A7o', 'A6o', 'A5o', 'A4o', 'A3o', 'A2o', 'KQo', 'KJo', 'KTo', 'K9o', 'K8o', 'K7o', 'K6o', 'K5o', 'K4o', 'K3o', 'K2o', 'QJo', 'QTo', 'Q9o', 'Q8o', 'Q7o', 'Q6o', 'Q5o', 'Q4o', 'Q3o', 'Q2o', 'JTo', 'J9o', 'J8o', 'J7o', 'J6o', 'J5o', 'J4o', 'J3o', 'J2o', 'T9o', 'T8o', 'T7o', 'T6o', '98o', '97o', '96o', '95o', '87o', '86o', '85o', '84o', '76o', '75o', '74o', '73o', '65o', '64o', '63o', '62o', '54o', '53o', '52o', '43o', '42o', '32o'],
+                    call: [],
+                    allin: []
+                }
+            },
+            '15': {
+                BTN: {
+                    raise: ['AA', 'KK', 'QQ', 'JJ', 'TT', '99', '88', '77', '66', '55', '44', '33', '22', 'AKs', 'AQs', 'AJs', 'ATs', 'A9s', 'A8s', 'A7s', 'A6s', 'A5s', 'A4s', 'A3s', 'A2s', 'KQs', 'KJs', 'KTs', 'K9s', 'K8s', 'K7s', 'K6s', 'K5s', 'K4s', 'K3s', 'K2s', 'QJs', 'QTs', 'Q9s', 'Q8s', 'Q7s', 'Q6s', 'Q5s', 'Q4s', 'Q3s', 'Q2s', 'JTs', 'J9s', 'J8s', 'J7s', 'J6s', 'J5s', 'J4s', 'J3s', 'J2s', 'T9s', 'T8s', 'T7s', 'T6s', '98s', '97s', '96s', '95s', '87s', '86s', '85s', '84s', '76s', '75s', '74s', '73s', '65s', '64s', '63s', '62s', '54s', '53s', '52s', '43s', '42s', '32s', 'AKo', 'AQo', 'AJo', 'ATo', 'A9o', 'A8o', 'A7o', 'A6o', 'A5o', 'A4o', 'A3o', 'A2o', 'KQo', 'KJo', 'KTo', 'K9o', 'K8o', 'K7o', 'K6o', 'K5o', 'K4o', 'K3o', 'K2o', 'QJo', 'QTo', 'Q9o', 'Q8o', 'Q7o', 'Q6o', 'Q5o', 'Q4o', 'Q3o', 'Q2o', 'JTo', 'J9o', 'J8o', 'J7o', 'J6o', 'J5o', 'J4o', 'J3o', 'J2o', 'T9o', 'T8o', 'T7o', 'T6o', '98o', '97o', '96o', '95o', '87o', '86o', '85o', '84o', '76o', '75o', '74o', '73o', '65o', '64o', '63o', '62o', '54o', '53o', '52o', '43o', '42o', '32o'],
+                    call: [],
+                    allin: ['A7s', 'A6s', 'K9s', 'K8s', 'K7s', 'K6s', 'K5s', 'K4s', 'K3s', 'K2s', 'Q9s', 'Q8s', 'Q7s', 'Q6s', 'Q5s', 'Q4s', 'Q3s', 'Q2s', 'J9s', 'J8s', 'J7s', 'J6s', 'J5s', 'J4s', 'J3s', 'J2s', 'T8s', 'T7s', 'T6s', 'T5s', 'T4s', 'T3s', 'T2s', '97s', '96s', '95s', '94s', '93s', '92s', '86s', '85s', '84s', '83s', '82s', '75s', '74s', '73s', '72s', '64s', '63s', '62s', '53s', '52s', '43s', '42s', '32s', 'A9o', 'A8o', 'A7o', 'A6o', 'A5o', 'A4o', 'A3o', 'A2o', 'K9o', 'K8o', 'K7o', 'K6o', 'K5o', 'K4o', 'K3o', 'K2o', 'Q9o', 'Q8o', 'Q7o', 'Q6o', 'Q5o', 'Q4o', 'Q3o', 'Q2o', 'J9o', 'J8o', 'J7o', 'J6o', 'J5o', 'J4o', 'J3o', 'J2o', 'T9o', 'T8o', 'T7o', 'T6o', 'T5o', 'T4o', 'T3o', 'T2o', '98o', '97o', '96o', '95o', '94o', '93o', '92o', '87o', '86o', '85o', '84o', '83o', '82o', '76o', '75o', '74o', '73o', '72o', '65o', '64o', '63o', '62o', '54o', '53o', '52o', '43o', '42o', '32o']
+                },
+                SB: {
+                    raise: ['AA', 'KK', 'QQ', 'JJ', 'TT', '99', '88', '77', '66', '55', '44', '33', '22', 'AKs', 'AQs', 'AJs', 'ATs', 'A9s', 'A8s', 'A7s', 'A6s', 'A5s', 'A4s', 'A3s', 'A2s', 'KQs', 'KJs', 'KTs', 'K9s', 'K8s', 'K7s', 'K6s', 'K5s', 'K4s', 'K3s', 'K2s', 'QJs', 'QTs', 'Q9s', 'Q8s', 'Q7s', 'Q6s', 'Q5s', 'Q4s', 'Q3s', 'Q2s', 'JTs', 'J9s', 'J8s', 'J7s', 'J6s', 'J5s', 'J4s', 'J3s', 'J2s', 'T9s', 'T8s', 'T7s', 'T6s', '98s', '97s', '96s', '95s', '87s', '86s', '85s', '84s', '76s', '75s', '74s', '73s', '65s', '64s', '63s', '62s', '54s', '53s', '52s', '43s', '42s', '32s', 'AKo', 'AQo', 'AJo', 'ATo', 'A9o', 'A8o', 'A7o', 'A6o', 'A5o', 'A4o', 'A3o', 'A2o', 'KQo', 'KJo', 'KTo', 'K9o', 'K8o', 'K7o', 'K6o', 'K5o', 'K4o', 'K3o', 'K2o', 'QJo', 'QTo', 'Q9o', 'Q8o', 'Q7o', 'Q6o', 'Q5o', 'Q4o', 'Q3o', 'Q2o', 'JTo', 'J9o', 'J8o', 'J7o', 'J6o', 'J5o', 'J4o', 'J3o', 'J2o', 'T9o', 'T8o', 'T7o', 'T6o', '98o', '97o', '96o', '95o', '87o', '86o', '85o', '84o', '76o', '75o', '74o', '73o', '65o', '64o', '63o', '62o', '54o', '53o', '52o', '43o', '42o', '32o'],
+                    call: [],
+                    allin: []
+                },
+                BB: {
+                    raise: ['AA', 'KK', 'QQ', 'JJ', 'TT', '99', '88', '77', '66', '55', '44', '33', '22', 'AKs', 'AQs', 'AJs', 'ATs', 'A9s', 'A8s', 'A7s', 'A6s', 'A5s', 'A4s', 'A3s', 'A2s', 'KQs', 'KJs', 'KTs', 'K9s', 'K8s', 'K7s', 'K6s', 'K5s', 'K4s', 'K3s', 'K2s', 'QJs', 'QTs', 'Q9s', 'Q8s', 'Q7s', 'Q6s', 'Q5s', 'Q4s', 'Q3s', 'Q2s', 'JTs', 'J9s', 'J8s', 'J7s', 'J6s', 'J5s', 'J4s', 'J3s', 'J2s', 'T9s', 'T8s', 'T7s', 'T6s', '98s', '97s', '96s', '95s', '87s', '86s', '85s', '84s', '76s', '75s', '74s', '73s', '65s', '64s', '63s', '62s', '54s', '53s', '52s', '43s', '42s', '32s', 'AKo', 'AQo', 'AJo', 'ATo', 'A9o', 'A8o', 'A7o', 'A6o', 'A5o', 'A4o', 'A3o', 'A2o', 'KQo', 'KJo', 'KTo', 'K9o', 'K8o', 'K7o', 'K6o', 'K5o', 'K4o', 'K3o', 'K2o', 'QJo', 'QTo', 'Q9o', 'Q8o', 'Q7o', 'Q6o', 'Q5o', 'Q4o', 'Q3o', 'Q2o', 'JTo', 'J9o', 'J8o', 'J7o', 'J6o', 'J5o', 'J4o', 'J3o', 'J2o', 'T9o', 'T8o', 'T7o', 'T6o', '98o', '97o', '96o', '95o', '87o', '86o', '85o', '84o', '76o', '75o', '74o', '73o', '65o', '64o', '63o', '62o', '54o', '53o', '52o', '43o', '42o', '32o'],
+                    call: [],
+                    allin: []
+                }
+            }
+        };
+
+        function init() {
+            const grid = document.getElementById('chartGrid');
+            grid.innerHTML = '';
+            allHands.forEach(hand => {
+                const cell = document.createElement('div');
+                cell.className = 'cell fold';
+                cell.textContent = hand;
+                cell.id = 'cell_' + hand;
+                cell.onclick = function() {
+                    document.getElementById('hand').value = hand;
+                    analyze();
+                };
+                grid.appendChild(cell);
+            });
+            updateChart();
+        }
+
+        function updateChart() {
+            const stack = document.getElementById('stack').value;
+            const pos = document.getElementById('position').value;
+            let raiseList = [], callList = [], allinList = [];
+            if (DATA[stack] && DATA[stack][pos]) {
+                raiseList = DATA[stack][pos].raise || [];
+                callList = DATA[stack][pos].call || [];
+                allinList = DATA[stack][pos].allin || [];
+            }
+            allHands.forEach(hand => {
+                const cell = document.getElementById('cell_' + hand);
+                if (!cell) return;
+                let cls = 'fold';
+                if (raiseList.includes(hand)) cls = 'raise';
+                else if (callList.includes(hand)) cls = 'call';
+                else if (allinList.includes(hand)) cls = 'allin';
+                cell.className = 'cell ' + cls;
+            });
+        }
+
+        function analyze() {
+            const stack = document.getElementById('stack').value;
+            const pos = document.getElementById('position').value;
+            const hand = document.getElementById('hand').value.toUpperCase().trim();
+            if (!hand) { alert('Введите карты!'); return; }
+            let action = 'ФОЛД';
+            let color = '#636e72';
+            let freq = '0%';
+            if (DATA[stack] && DATA[stack][pos]) {
+                const data = DATA[stack][pos];
+                if (data.raise && data.raise.includes(hand)) {
+                    action = 'РЕЙЗ / ОЛЛ-ИН'; color = '#ff6b6b'; freq = '100%';
+                } else if (data.allin && data.allin.includes(hand)) {
+                    action = 'ALL-IN'; color = '#8e44ad'; freq = '100%';
+                } else if (data.call && data.call.includes(hand)) {
+                    action = 'КОЛЛ'; color = '#4a69bd'; freq = '100%';
+                }
+            }
+            document.getElementById('result').innerHTML = 
+                '<div class="action" style="color: ' + color + '">' + action + '</div>' +
+                '<div class="details">Частота: ' + freq + '</div>' +
+                '<div class="details">' + hand + ' | ' + pos + ' | ' + stack + ' BB</div>';
+            document.querySelectorAll('.cell').forEach(c => {
+                c.classList.remove('selected');
+                c.style.border = 'none';
+            });
+            const cell = document.getElementById('cell_' + hand);
+            if (cell) { cell.classList.add('selected'); }
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
