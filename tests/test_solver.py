@@ -1,5 +1,12 @@
 import unittest
 
+from solver.continuation import (
+    ContinuationStateKey,
+    ContinuationValue,
+    ContinuationValueTable,
+    MissingContinuationValue,
+)
+from solver.convergence import combo_weighted_action_frequency, compare_action
 from solver.equity import concrete_equity_sampled
 from solver.evaluator import evaluate_five, evaluate_seven
 from solver.hands import HAND_CLASSES, class_combo_count, combo_to_class, expand_hand_class
@@ -117,6 +124,59 @@ class ModelTests(unittest.TestCase):
             ),
         )
         self.assertEqual(key.canonical(), "3max|wta|15-15-15|BTN_RAISE_2>SB_CALL|BB")
+
+
+class ContinuationTests(unittest.TestCase):
+    def _key(self):
+        node = DecisionNodeKey(
+            mode=Mode.THREE_MAX,
+            payout_profile=PayoutProfile.WTA,
+            stacks_bb=(15.0, 15.0, 15.0),
+            hero="BB",
+            history=(
+                TreeAction("BTN", Action.RAISE, 2.0),
+                TreeAction("SB", Action.CALL),
+                TreeAction("BB", Action.CALL),
+            ),
+        )
+        return ContinuationStateKey(node=node, hand_class="A5s", pot_bb=6.0, spr=2.1667)
+
+    def test_missing_continuation_is_fatal(self):
+        table = ContinuationValueTable()
+        with self.assertRaises(MissingContinuationValue):
+            table.require(self._key())
+
+    def test_continuation_requires_provenance(self):
+        table = ContinuationValueTable()
+        with self.assertRaises(ValueError):
+            table.put(
+                self._key(),
+                ContinuationValue(ev_bb=0.25, source="", status="CONTINUATION_APPROX"),
+            )
+
+    def test_continuation_round_trip(self):
+        table = ContinuationValueTable()
+        value = ContinuationValue(
+            ev_bb=0.25,
+            source="POSTFLOP_SUBGAME_TEST",
+            status="CONTINUATION_APPROX",
+            samples=1000,
+            abstraction="toy",
+        )
+        table.put(self._key(), value)
+        self.assertEqual(table.require(self._key()), value)
+
+
+class ConvergenceTests(unittest.TestCase):
+    def test_identical_chart_has_zero_distance(self):
+        chart = {h: {"fold": 0.25, "jam": 0.75} for h in HAND_CLASSES}
+        distance = compare_action("BTN_ROOT", chart, chart, "jam")
+        self.assertAlmostEqual(distance.combo_weighted_mae_pct, 0.0)
+        self.assertAlmostEqual(distance.max_hand_delta_pct, 0.0)
+
+    def test_combo_weighted_frequency(self):
+        chart = {h: {"fold": 0.0, "jam": 1.0} for h in HAND_CLASSES}
+        self.assertAlmostEqual(combo_weighted_action_frequency(chart, "jam"), 1.0)
 
 
 class RegretTests(unittest.TestCase):
