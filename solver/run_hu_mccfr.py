@@ -4,6 +4,7 @@ import argparse
 import json
 from pathlib import Path
 
+from .diagnostics import estimate_hu_pushfold_best_response_gains
 from .hands import HAND_CLASSES, class_combo_count
 from .hu_mccfr import solve_hu_pushfold_chance_sampled
 from .pushfold_hu import compatible_pair_count
@@ -33,12 +34,21 @@ def main() -> None:
     parser.add_argument("--stack", type=float, required=True)
     parser.add_argument("--iterations", type=int, default=1_000_000)
     parser.add_argument("--seed", type=int, default=20260906)
+    parser.add_argument("--diagnostic-samples", type=int, default=50_000)
     parser.add_argument("--output", required=True)
     args = parser.parse_args()
 
     result = solve_hu_pushfold_chance_sampled(args.stack, args.iterations, args.seed)
+    diagnostics = estimate_hu_pushfold_best_response_gains(
+        result.btn,
+        result.bb,
+        stack_bb=args.stack,
+        samples=args.diagnostic_samples,
+        seed=args.seed + 1_000_000,
+    )
+
     payload = {
-        "schema_version": "1.0",
+        "schema_version": "1.1",
         "status": "SOLVER_APPROX",
         "production_approved": False,
         "model": "HU_CHANCE_SAMPLED_PUSH_FOLD_V1",
@@ -61,6 +71,16 @@ def main() -> None:
             "BTN": btn_aggregate(result.btn),
             "BB_facing_BTN_jam": bb_aggregate_conditional_on_jam(result.btn, result.bb),
         },
+        "diagnostics": {
+            "samples": diagnostics.samples,
+            "BTN_best_response_gain_bb": diagnostics.btn_best_response_gain_bb,
+            "BB_best_response_gain_bb": diagnostics.bb_best_response_gain_bb,
+            "total_unilateral_gain_bb": diagnostics.total_unilateral_gain_bb,
+            "BTN_policy_ev_bb": diagnostics.btn_policy_ev_bb,
+            "BB_policy_ev_bb": diagnostics.bb_policy_ev_bb,
+            "zero_sum_residual_bb": diagnostics.btn_policy_ev_bb + diagnostics.bb_policy_ev_bb,
+            "scope": "HU push/fold abstraction only; not full Hold'em exploitability"
+        },
         "hands": {
             "BTN": result.btn,
             "BB_facing_BTN_jam": result.bb,
@@ -70,7 +90,7 @@ def main() -> None:
     out = Path(args.output)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8")
-    print(json.dumps(payload["aggregate_pct"], indent=2))
+    print(json.dumps({"aggregate_pct": payload["aggregate_pct"], "diagnostics": payload["diagnostics"]}, indent=2))
     print(f"wrote {out}")
 
 
