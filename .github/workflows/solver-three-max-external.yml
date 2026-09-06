@@ -1,0 +1,62 @@
+name: 3Max External Solver Benchmark
+
+on:
+  pull_request:
+    paths:
+      - 'solver/three_max_external_mccfr.py'
+      - 'solver/run_three_max_external.py'
+      - 'solver/run_three_max_external_convergence.py'
+      - 'solver/convergence.py'
+      - 'tests/test_solver.py'
+      - '.github/workflows/solver-three-max-external.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  external-8bb:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run unit tests
+        run: python -m unittest tests.test_solver
+      - name: Solve stratified external 8bb
+        run: |
+          mkdir -p solver/output
+          python -m solver.run_three_max_external \
+            --stack 8 \
+            --sweeps 300 \
+            --seed 20260912 \
+            --output solver/output/three-max-external-8bb-300s.json
+      - name: Compare independent stratified runs
+        run: |
+          python -m solver.run_three_max_external_convergence \
+            --stack 8 \
+            --sweeps-a 200 \
+            --sweeps-b 600 \
+            --seed-a 20260912 \
+            --seed-b 20260913 \
+            --output solver/output/three-max-external-8bb-convergence.json
+      - name: Compare 300-sweep output to reference anchor
+        run: |
+          python -m solver.run_reference_compare \
+            --solver-json solver/output/three-max-external-8bb-300s.json \
+            --anchors data/source-verified-anchors.json \
+            --output solver/output/three-max-external-8bb-reference-delta.json
+      - name: Upload benchmark
+        uses: actions/upload-artifact@v4
+        with:
+          name: three-max-external-8bb-benchmark
+          path: |
+            solver/output/three-max-external-8bb-300s.json
+            solver/output/three-max-external-8bb-convergence.json
+            solver/output/three-max-external-8bb-reference-delta.json
+          if-no-files-found: error
+          retention-days: 7
