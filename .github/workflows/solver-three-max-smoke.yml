@@ -6,11 +6,13 @@ on:
     paths:
       - 'solver/**'
       - 'tests/test_solver.py'
+      - 'data/source-verified-anchors.json'
       - '.github/workflows/solver-three-max-smoke.yml'
   pull_request:
     paths:
       - 'solver/**'
       - 'tests/test_solver.py'
+      - 'data/source-verified-anchors.json'
       - '.github/workflows/solver-three-max-smoke.yml'
   workflow_dispatch:
 
@@ -49,10 +51,18 @@ jobs:
             --iterations 100000 \
             --seed 20260910 \
             --output solver/output/three-max-8bb-100k.json
-      - name: Upload result
+      - name: Compare against external audit anchor
+        run: |
+          python -m solver.run_reference_compare \
+            --solver-json solver/output/three-max-8bb-100k.json \
+            --anchors data/source-verified-anchors.json \
+            --output solver/output/three-max-8bb-reference-delta.json
+      - name: Upload result and validation delta
         uses: actions/upload-artifact@v4
         with:
           name: three-max-8bb-100k
-          path: solver/output/three-max-8bb-100k.json
+          path: |
+            solver/output/three-max-8bb-100k.json
+            solver/output/three-max-8bb-reference-delta.json
           if-no-files-found: error
           retention-days: 7
