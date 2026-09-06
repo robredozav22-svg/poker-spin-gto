@@ -5,6 +5,7 @@ from solver.evaluator import evaluate_five, evaluate_seven
 from solver.hands import HAND_CLASSES, class_combo_count, combo_to_class, expand_hand_class
 from solver.hu_mccfr import solve_hu_pushfold_chance_sampled
 from solver.model import Action, DecisionNodeKey, GameConfig, Mode, PayoutProfile, TreeAction
+from solver.pots import settle_pots
 from solver.pushfold_hu import solve_hu_pushfold
 from solver.regret import RegretNode, expected_value
 
@@ -47,6 +48,37 @@ class EvaluatorTests(unittest.TestCase):
         result = concrete_equity_sampled(("As", "Ah"), ("Ks", "Kh"), boards=800, seed=7)
         self.assertGreater(result.equity, 0.70)
         self.assertEqual(result.total, 800)
+
+
+class PotSettlementTests(unittest.TestCase):
+    def test_three_way_equal_allin_is_zero_sum(self):
+        payoff = settle_pots(
+            {"BTN": 10.0, "SB": 10.0, "BB": 10.0},
+            {"BTN": False, "SB": False, "BB": False},
+            {"BTN": (1,), "SB": (3,), "BB": (2,)},
+        )
+        self.assertEqual(payoff, {"BTN": -10.0, "SB": 20.0, "BB": -10.0})
+        self.assertAlmostEqual(sum(payoff.values()), 0.0)
+
+    def test_asymmetric_side_pot(self):
+        # BTN is all-in for 5; SB/BB play a 10bb side pot. BTN wins main,
+        # BB wins side. Main=15, side=10.
+        payoff = settle_pots(
+            {"BTN": 5.0, "SB": 10.0, "BB": 10.0},
+            {"BTN": False, "SB": False, "BB": False},
+            {"BTN": (3,), "SB": (1,), "BB": (2,)},
+        )
+        self.assertEqual(payoff, {"BTN": 10.0, "SB": -10.0, "BB": 0.0})
+        self.assertAlmostEqual(sum(payoff.values()), 0.0)
+
+    def test_folded_chips_stay_in_pot(self):
+        payoff = settle_pots(
+            {"BTN": 2.0, "SB": 2.0, "BB": 1.0},
+            {"BTN": True, "SB": False, "BB": True},
+            {"SB": (1,)},
+        )
+        self.assertEqual(payoff, {"BTN": -2.0, "SB": 3.0, "BB": -1.0})
+        self.assertAlmostEqual(sum(payoff.values()), 0.0)
 
 
 class ModelTests(unittest.TestCase):
