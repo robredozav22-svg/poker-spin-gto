@@ -8,6 +8,7 @@ on:
       - 'solver/run_three_max_external_convergence.py'
       - 'solver/convergence.py'
       - 'tests/test_solver.py'
+      - 'tests/test_external_solver.py'
       - '.github/workflows/solver-three-max-external.yml'
   workflow_dispatch:
 
@@ -26,7 +27,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Run unit tests
-        run: python -m unittest tests.test_solver
+        run: python -m unittest tests.test_solver tests.test_external_solver
       - name: Solve stratified external 8bb
         run: |
           mkdir -p solver/output
