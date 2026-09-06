@@ -4,6 +4,13 @@ on:
   push:
     branches: [chat-aligned-v2]
     paths:
+      - 'solver/**'
+      - 'tests/test_solver.py'
+      - '.github/workflows/solver-three-max-smoke.yml'
+  pull_request:
+    paths:
+      - 'solver/**'
+      - 'tests/test_solver.py'
       - '.github/workflows/solver-three-max-smoke.yml'
   workflow_dispatch:
 
@@ -11,6 +18,19 @@ permissions:
   contents: read
 
 jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run solver unit tests
+        run: python -m unittest tests.test_solver -v
+
   three-max-8bb:
     runs-on: ubuntu-latest
     timeout-minutes: 10
