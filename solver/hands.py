@@ -18,7 +18,6 @@ def all_hand_classes() -> list[str]:
                 out.append(r1 + r2 + "s")
             else:
                 out.append(r2 + r1 + "o")
-    # grid construction repeats off-diagonal classes; de-duplicate in order
     return list(dict.fromkeys(out))
 
 
@@ -44,10 +43,7 @@ def class_combo_count(hand: str) -> int:
 
 
 def expand_hand_class(hand: str) -> list[tuple[str, str]]:
-    """Expand a hand class into exact two-card combinations.
-
-    Cards are encoded as rank+suit, e.g. As, Kd.
-    """
+    """Expand a hand class into exact two-card combinations."""
     hand = normalize_class(hand)
     if len(hand) == 2:
         rank = hand[0]
@@ -63,6 +59,19 @@ def expand_hand_class(hand: str) -> list[tuple[str, str]]:
             if s1 != s2:
                 out.append((r1 + s1, r2 + s2))
     return out
+
+
+def combo_to_class(combo: tuple[str, str]) -> str:
+    validate_combo(combo)
+    a, b = combo
+    r1, s1 = a[0], a[1]
+    r2, s2 = b[0], b[1]
+    if r1 == r2:
+        return r1 + r2
+    if RANK_INDEX[r1] > RANK_INDEX[r2]:
+        r1, r2 = r2, r1
+        s1, s2 = s2, s1
+    return r1 + r2 + ("s" if s1 == s2 else "o")
 
 
 def full_deck() -> list[str]:
