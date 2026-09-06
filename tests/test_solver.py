@@ -8,6 +8,7 @@ from solver.model import Action, DecisionNodeKey, GameConfig, Mode, PayoutProfil
 from solver.pots import settle_pots
 from solver.pushfold_hu import solve_hu_pushfold
 from solver.regret import RegretNode, expected_value
+from solver.three_max_mccfr import solve_three_max_pushfold_chance_sampled, terminal_payoff
 
 
 class HandModelTests(unittest.TestCase):
@@ -61,8 +62,6 @@ class PotSettlementTests(unittest.TestCase):
         self.assertAlmostEqual(sum(payoff.values()), 0.0)
 
     def test_asymmetric_side_pot(self):
-        # BTN is all-in for 5; SB/BB play a 10bb side pot. BTN wins main,
-        # BB wins side. Main=15, side=10.
         payoff = settle_pots(
             {"BTN": 5.0, "SB": 10.0, "BB": 10.0},
             {"BTN": False, "SB": False, "BB": False},
@@ -78,6 +77,29 @@ class PotSettlementTests(unittest.TestCase):
             {"SB": (1,)},
         )
         self.assertEqual(payoff, {"BTN": -2.0, "SB": 3.0, "BB": -1.0})
+        self.assertAlmostEqual(sum(payoff.values()), 0.0)
+
+
+class ThreeMaxTerminalTests(unittest.TestCase):
+    def setUp(self):
+        self.ranks = {"BTN": (3,), "SB": (2,), "BB": (1,)}
+
+    def test_everybody_folds_to_bb(self):
+        payoff = terminal_payoff(("BTN:fold", "SB:fold"), 8.0, self.ranks)
+        self.assertEqual(payoff, {"BTN": 0.0, "SB": -0.5, "BB": 0.5})
+
+    def test_btn_jam_both_fold(self):
+        payoff = terminal_payoff(("BTN:jam", "SB:fold", "BB:fold"), 8.0, self.ranks)
+        self.assertEqual(payoff, {"BTN": 1.5, "SB": -0.5, "BB": -1.0})
+
+    def test_btn_beats_bb_with_dead_sb_blind(self):
+        payoff = terminal_payoff(("BTN:jam", "SB:fold", "BB:call"), 8.0, self.ranks)
+        self.assertEqual(payoff, {"BTN": 8.5, "SB": -0.5, "BB": -8.0})
+        self.assertAlmostEqual(sum(payoff.values()), 0.0)
+
+    def test_three_way_showdown(self):
+        payoff = terminal_payoff(("BTN:jam", "SB:call", "BB:call"), 8.0, self.ranks)
+        self.assertEqual(payoff, {"BTN": 16.0, "SB": -8.0, "BB": -8.0})
         self.assertAlmostEqual(sum(payoff.values()), 0.0)
 
 
@@ -117,6 +139,15 @@ class RegretTests(unittest.TestCase):
         for hand in HAND_CLASSES:
             self.assertAlmostEqual(sum(result.btn[hand].values()), 1.0, places=9)
             self.assertAlmostEqual(sum(result.bb[hand].values()), 1.0, places=9)
+
+    def test_three_max_solver_returns_all_public_nodes(self):
+        result = solve_three_max_pushfold_chance_sampled(stack_bb=8.0, iterations=60, seed=17)
+        self.assertEqual(len(result.strategies), 6)
+        self.assertIn("BTN_ROOT", result.strategies)
+        for chart in result.strategies.values():
+            self.assertEqual(len(chart), 169)
+            for strategy in chart.values():
+                self.assertAlmostEqual(sum(strategy.values()), 1.0, places=9)
 
 
 if __name__ == "__main__":
