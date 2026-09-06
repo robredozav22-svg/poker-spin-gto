@@ -2,7 +2,8 @@ import unittest
 
 from solver.equity import concrete_equity_sampled
 from solver.evaluator import evaluate_five, evaluate_seven
-from solver.hands import HAND_CLASSES, class_combo_count, expand_hand_class
+from solver.hands import HAND_CLASSES, class_combo_count, combo_to_class, expand_hand_class
+from solver.hu_mccfr import solve_hu_pushfold_chance_sampled
 from solver.model import Action, DecisionNodeKey, GameConfig, Mode, PayoutProfile, TreeAction
 from solver.pushfold_hu import solve_hu_pushfold
 from solver.regret import RegretNode, expected_value
@@ -17,6 +18,11 @@ class HandModelTests(unittest.TestCase):
         self.assertEqual(len(expand_hand_class("AA")), 6)
         self.assertEqual(len(expand_hand_class("AKs")), 4)
         self.assertEqual(len(expand_hand_class("AKo")), 12)
+
+    def test_combo_to_class(self):
+        self.assertEqual(combo_to_class(("As", "Ah")), "AA")
+        self.assertEqual(combo_to_class(("As", "Ks")), "AKs")
+        self.assertEqual(combo_to_class(("Kd", "As")), "AKo")
 
 
 class EvaluatorTests(unittest.TestCase):
@@ -71,6 +77,14 @@ class RegretTests(unittest.TestCase):
     def test_pushfold_refuses_incomplete_equity_table(self):
         with self.assertRaises(ValueError):
             solve_hu_pushfold({}, stack_bb=2.0, iterations=1)
+
+    def test_chance_sampled_solver_is_self_contained(self):
+        result = solve_hu_pushfold_chance_sampled(stack_bb=2.0, iterations=300, seed=9)
+        self.assertEqual(len(result.btn), 169)
+        self.assertEqual(len(result.bb), 169)
+        for hand in HAND_CLASSES:
+            self.assertAlmostEqual(sum(result.btn[hand].values()), 1.0, places=9)
+            self.assertAlmostEqual(sum(result.bb[hand].values()), 1.0, places=9)
 
 
 if __name__ == "__main__":
