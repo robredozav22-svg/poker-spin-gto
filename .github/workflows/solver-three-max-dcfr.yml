@@ -1,0 +1,64 @@
+name: 3Max DCFR Benchmark
+
+on:
+  pull_request:
+    paths:
+      - 'solver/dcfr.py'
+      - 'solver/three_max_external_dcfr.py'
+      - 'solver/run_three_max_external_dcfr.py'
+      - 'solver/run_three_max_dcfr_convergence.py'
+      - 'solver/convergence.py'
+      - 'solver/promotion.py'
+      - 'tests/**'
+      - '.github/workflows/solver-three-max-dcfr.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dcfr-8bb:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run solver tests
+        run: python -m unittest discover -s tests -p 'test_*.py'
+      - name: Solve DCFR 8bb
+        run: |
+          mkdir -p solver/output
+          python -m solver.run_three_max_external_dcfr \
+            --stack 8 \
+            --sweeps 500 \
+            --seed 20260914 \
+            --output solver/output/three-max-dcfr-8bb-500s.json
+      - name: Measure DCFR convergence
+        run: |
+          python -m solver.run_three_max_dcfr_convergence \
+            --stack 8 \
+            --sweeps-a 300 \
+            --sweeps-b 900 \
+            --seed-a 20260914 \
+            --seed-b 20260915 \
+            --output solver/output/three-max-dcfr-8bb-convergence.json
+      - name: Compare to validation anchor
+        run: |
+          python -m solver.run_reference_compare \
+            --solver-json solver/output/three-max-dcfr-8bb-500s.json \
+            --anchors data/source-verified-anchors.json \
+            --output solver/output/three-max-dcfr-8bb-reference-delta.json
+      - name: Upload benchmark
+        uses: actions/upload-artifact@v4
+        with:
+          name: three-max-dcfr-8bb-benchmark
+          path: |
+            solver/output/three-max-dcfr-8bb-500s.json
+            solver/output/three-max-dcfr-8bb-convergence.json
+            solver/output/three-max-dcfr-8bb-reference-delta.json
+          if-no-files-found: error
+          retention-days: 7
