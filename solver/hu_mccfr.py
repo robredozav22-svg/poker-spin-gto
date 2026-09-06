@@ -76,15 +76,19 @@ def solve_hu_pushfold_chance_sampled(
         btn_values = {"fold": -0.5, "jam": btn_jam_ev}
         btn_ev = expected_value(btn_strategy, btn_values)
         btn_node.add_regrets(btn_values, btn_ev)
+        # BTN has no prior own action, so own reach is 1 at the root infoset.
         btn_node.accumulate_strategy()
 
-        # BB's decision exists only if BTN jams, so both regret and average
-        # strategy are reach-weighted by BTN jam probability.
+        # BB's regret update is counterfactually weighted by opponent reach:
+        # the BTN jam probability. But average-strategy accumulation is
+        # weighted by BB's *own* reach, which is 1 because BB has no earlier
+        # action. Using BTN jam probability here would bias the reported
+        # average strategy toward periods when BTN happened to jam more often.
         bb_values = {"fold": -1.0, "call": bb_showdown}
         bb_ev = expected_value(bb_strategy, bb_values)
-        reach = btn_strategy["jam"]
-        bb_node.add_regrets(bb_values, bb_ev, weight=reach)
-        bb_node.accumulate_strategy(reach_weight=reach)
+        opponent_reach = btn_strategy["jam"]
+        bb_node.add_regrets(bb_values, bb_ev, weight=opponent_reach)
+        bb_node.accumulate_strategy()
 
     return HuMccfrResult(
         btn={h: btn_nodes[h].average_strategy() for h in HAND_CLASSES},
