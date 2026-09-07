@@ -90,7 +90,7 @@ mod tests{
     fn if_bb_always_folds_sb_jam_ev_is_plus_one(){
         let blockers=BlockerMatrix::build();let prior=ComboRange::uniform();let s=pure_bb_strategy(None);let mut cache=EquityCache::new();
         let v=sampled_sb_fold_jam_values(8.0,0,&prior,&s,&blockers,&mut cache,1,1).unwrap();
-        assert_eq!(v.fold_ev_sb,-0.5);assert!((v.bb_fold_probability-1.0).abs()<1e-12);assert_eq!(v.bb_call_probability,0.0);assert_eq!(v.jam_ev_sb,1.0);assert!(v.equity_when_called.is_none());
+        assert_eq!(v.fold_ev_sb,-0.5);assert!((v.bb_fold_probability-1.0).abs()<1e-12);assert_eq!(v.bb_call_probability,0.0);assert!((v.jam_ev_sb-1.0).abs()<1e-12);assert!(v.equity_when_called.is_none());
     }
 
     #[test]
