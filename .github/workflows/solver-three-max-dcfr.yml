@@ -1,16 +1,6 @@
-name: 3Max DCFR Benchmark
+name: 3Max DCFR Benchmark [ARCHIVED]
 
 on:
-  pull_request:
-    paths:
-      - 'solver/dcfr.py'
-      - 'solver/three_max_external_dcfr.py'
-      - 'solver/run_three_max_external_dcfr.py'
-      - 'solver/run_three_max_dcfr_convergence.py'
-      - 'solver/convergence.py'
-      - 'solver/promotion.py'
-      - 'tests/**'
-      - '.github/workflows/solver-three-max-dcfr.yml'
   workflow_dispatch:
 
 permissions:
