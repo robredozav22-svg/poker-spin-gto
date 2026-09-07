@@ -1,4 +1,4 @@
-name: UI Router Tests
+name: V45 UI Core Tests
 
 on:
   pull_request:
@@ -7,6 +7,7 @@ on:
       - 'app.js'
       - 'index.html'
       - 'tests/test_ui_router.js'
+      - 'tests/test_ui_grid.js'
       - '.github/workflows/ui-router-tests.yml'
   push:
     branches: [chat-aligned-v2]
@@ -15,6 +16,7 @@ on:
       - 'app.js'
       - 'index.html'
       - 'tests/test_ui_router.js'
+      - 'tests/test_ui_grid.js'
       - '.github/workflows/ui-router-tests.yml'
   workflow_dispatch:
 
@@ -22,7 +24,7 @@ permissions:
   contents: read
 
 jobs:
-  router:
+  ui-core:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -32,3 +34,5 @@ jobs:
           node-version: '22'
       - name: Run router regression tests
         run: node tests/test_ui_router.js
+      - name: Run mixed-grid validation tests
+        run: node tests/test_ui_grid.js
