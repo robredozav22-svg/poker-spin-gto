@@ -9,6 +9,7 @@ on:
       - 'solver-rs/src/tree_profile.rs'
       - 'solver-rs/src/tree_catalog.rs'
       - 'solver-rs/src/strategy_record.rs'
+      - 'solver-rs/src/strategy_compare.rs'
       - 'solver-rs/src/continuation_registry.rs'
       - 'solver-rs/src/solver_evidence.rs'
       - 'solver-rs/src/lib.rs'
