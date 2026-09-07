@@ -20,6 +20,7 @@ pub mod payoff_build;
 pub mod payoff_lookup;
 pub mod payoff_manifest;
 pub mod payoff_table;
+pub mod persisted_range_equity;
 pub mod range;
 pub mod range_equity;
 pub mod range_equity3;
