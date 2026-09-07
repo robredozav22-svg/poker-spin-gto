@@ -7,6 +7,7 @@ pub mod joint;
 pub mod range;
 pub mod regret;
 pub mod terminal;
+pub mod terminal_ev;
 pub mod tree;
 
 pub const HAND_CLASSES: usize = 169;
