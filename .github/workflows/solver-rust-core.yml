@@ -20,3 +20,6 @@ jobs:
       - name: Run Rust core tests
         working-directory: solver-rs
         run: cargo test --all
+      - name: Run deterministic sparse convergence benchmark
+        working-directory: solver-rs
+        run: cargo run --release --bin restricted_sparse_bench
