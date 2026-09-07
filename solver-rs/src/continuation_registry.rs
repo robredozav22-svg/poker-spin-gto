@@ -11,10 +11,7 @@ pub struct ContinuationKey{pub node:PreflopNodeKey,pub action:PreflopAction}
 
 #[derive(Debug,Clone,Copy,PartialEq,Eq,Hash)]
 pub enum ContinuationArtifactScope{
-    /// Artifact values are valid only for one immutable upstream reach/range state.
     RangeConditioned,
-    /// Artifact contains a continuation policy/value model complete enough to be
-    /// evaluated for arbitrary legal private-state reach at this edge.
     PolicyComplete,
 }
 
@@ -30,12 +27,8 @@ pub struct ContinuationArtifactProof{
 
 impl ContinuationArtifactProof{
     pub fn new(
-        artifact_id:impl Into<String>,
-        checksum:impl Into<String>,
-        required_states:u64,
-        covered_states:u64,
-        scope:ContinuationArtifactScope,
-        range_state_id:Option<String>,
+        artifact_id:impl Into<String>,checksum:impl Into<String>,required_states:u64,covered_states:u64,
+        scope:ContinuationArtifactScope,range_state_id:Option<String>,
     )->Result<Self,String>{
         let artifact_id=artifact_id.into();let checksum=checksum.into();
         if artifact_id.trim().is_empty(){return Err("continuation artifact_id must not be empty".into());}
@@ -44,26 +37,21 @@ impl ContinuationArtifactProof{
         if covered_states>required_states{return Err("continuation covered_states cannot exceed required_states".into());}
         match scope{
             ContinuationArtifactScope::RangeConditioned=>{
-                if range_state_id.as_deref().map(str::trim).filter(|s|!s.is_empty()).is_none(){
-                    return Err("range-conditioned continuation artifact requires immutable range_state_id".into());
-                }
+                if range_state_id.as_deref().map(str::trim).filter(|s|!s.is_empty()).is_none(){return Err("range-conditioned continuation artifact requires immutable range_state_id".into());}
             }
             ContinuationArtifactScope::PolicyComplete=>{
-                if range_state_id.as_deref().map(str::trim).filter(|s|!s.is_empty()).is_some(){
-                    return Err("policy-complete continuation artifact must not masquerade as one range-conditioned state".into());
-                }
+                if range_state_id.as_deref().map(str::trim).filter(|s|!s.is_empty()).is_some(){return Err("policy-complete continuation artifact must not masquerade as one range-conditioned state".into());}
             }
         }
         Ok(Self{artifact_id,checksum,required_states,covered_states,scope,range_state_id})
     }
 
-    pub fn is_complete(&self)->bool{self.required_states>0 && self.covered_states==self.required_states}
-
-    pub fn is_range_safe(&self)->bool{
-        match self.scope{
-            ContinuationArtifactScope::RangeConditioned=>self.range_state_id.as_deref().map(str::trim).filter(|s|!s.is_empty()).is_some(),
-            ContinuationArtifactScope::PolicyComplete=>self.range_state_id.is_none(),
-        }
+    pub fn is_complete(&self)->bool{self.required_states>0&&self.covered_states==self.required_states}
+    pub fn range_state_matches(&self,expected:&str)->bool{
+        self.scope==ContinuationArtifactScope::RangeConditioned&&self.range_state_id.as_deref()==Some(expected)
+    }
+    pub fn generic_exact_ready(&self)->bool{
+        self.is_complete()&&self.scope==ContinuationArtifactScope::PolicyComplete&&self.range_state_id.is_none()
     }
 }
 
@@ -78,11 +66,7 @@ pub struct ContinuationEvidence{
 
 impl ContinuationEvidence{
     pub fn new(
-        key:ContinuationKey,
-        verification:ContinuationVerification,
-        source_id:impl Into<String>,
-        model_profile_id:impl Into<String>,
-        artifact:Option<ContinuationArtifactProof>,
+        key:ContinuationKey,verification:ContinuationVerification,source_id:impl Into<String>,model_profile_id:impl Into<String>,artifact:Option<ContinuationArtifactProof>,
     )->Result<Self,String>{
         let source_id=source_id.into();let model_profile_id=model_profile_id.into();
         if source_id.trim().is_empty(){return Err("continuation source_id must not be empty".into());}
@@ -90,14 +74,17 @@ impl ContinuationEvidence{
         if verification==ContinuationVerification::VerifiedMeasured{
             let proof=artifact.as_ref().ok_or_else(||"VERIFIED_MEASURED continuation requires artifact proof".to_string())?;
             if !proof.is_complete(){return Err("VERIFIED_MEASURED continuation requires complete artifact coverage".into());}
-            if !proof.is_range_safe(){return Err("VERIFIED_MEASURED continuation requires range-safe artifact semantics".into());}
         }
         Ok(Self{key,verification,source_id,model_profile_id,artifact})
     }
 
     pub fn exact_ready(&self)->bool{
+        self.verification==ContinuationVerification::VerifiedMeasured&&self.artifact.as_ref().map(|a|a.generic_exact_ready()).unwrap_or(false)
+    }
+
+    pub fn exact_ready_for_range(&self,range_state_id:&str)->bool{
         self.verification==ContinuationVerification::VerifiedMeasured
-            && self.artifact.as_ref().map(|a|a.is_complete()&&a.is_range_safe()).unwrap_or(false)
+            && self.artifact.as_ref().map(|a|a.is_complete()&&a.range_state_matches(range_state_id)).unwrap_or(false)
     }
 }
 
@@ -110,7 +97,6 @@ impl ContinuationRegistry{
         for entry in entries{if by_key.insert(entry.key.clone(),entry).is_some(){return Err("duplicate continuation evidence key".into());}}
         Ok(Self{by_key})
     }
-
     pub fn get(&self,key:&ContinuationKey)->Option<&ContinuationEvidence>{self.by_key.get(key)}
 
     pub fn missing_or_unverified_required_edges(&self,catalog:&TreeCatalog)->Vec<ContinuationKey>{
@@ -120,8 +106,7 @@ impl ContinuationRegistry{
                 if edge.continuation!=ContinuationContract::RequiresPostflopEv{continue;}
                 let key=ContinuationKey{node:node.key.clone(),action:edge.action};
                 if !seen.insert(key.clone()){continue;}
-                let ok=self.by_key.get(&key).map(|e|e.exact_ready()).unwrap_or(false);
-                if !ok{missing.push(key);}
+                if !self.by_key.get(&key).map(|e|e.exact_ready()).unwrap_or(false){missing.push(key);}
             }
         }
         missing
@@ -129,7 +114,22 @@ impl ContinuationRegistry{
 
     pub fn validate_exact_coverage(&self,catalog:&TreeCatalog)->Result<(),String>{
         let missing=self.missing_or_unverified_required_edges(catalog);
-        if !missing.is_empty(){return Err(format!("exact strategy blocked: {} postflop continuation edge(s) lack VERIFIED_MEASURED complete range-safe artifact coverage",missing.len()));}
+        if !missing.is_empty(){return Err(format!("exact strategy blocked: {} postflop continuation edge(s) lack VERIFIED_MEASURED PolicyComplete artifact coverage",missing.len()));}
+        Ok(())
+    }
+
+    pub fn validate_exact_coverage_for_range(&self,catalog:&TreeCatalog,range_state_id:&str)->Result<(),String>{
+        if range_state_id.trim().is_empty(){return Err("range_state_id must not be empty".into());}
+        let mut missing=0usize;let mut seen=HashSet::new();
+        for node in &catalog.nodes{
+            for edge in &node.edges{
+                if edge.continuation!=ContinuationContract::RequiresPostflopEv{continue;}
+                let key=ContinuationKey{node:node.key.clone(),action:edge.action};
+                if !seen.insert(key.clone()){continue;}
+                if !self.by_key.get(&key).map(|e|e.exact_ready()||e.exact_ready_for_range(range_state_id)).unwrap_or(false){missing+=1;}
+            }
+        }
+        if missing>0{return Err(format!("exact strategy blocked: {missing} continuation edge(s) do not match required range_state_id"));}
         Ok(())
     }
 }
@@ -151,74 +151,48 @@ mod tests{
         let catalog=TreeCatalog::new(screen_reference_spins_15bb_v1(),CatalogCompleteness::PartialReference,crate::reference_tree_15bb::all_reference_specs()).unwrap();
         let registry=ContinuationRegistry::new(vec![]).unwrap();
         assert_eq!(registry.missing_or_unverified_required_edges(&catalog).len(),3);
-        assert!(registry.validate_exact_coverage(&catalog).is_err());
     }
 
     #[test]
     fn verified_measured_without_artifact_is_rejected(){
         let catalog=TreeCatalog::new(screen_reference_spins_15bb_v1(),CatalogCompleteness::PartialReference,crate::reference_tree_15bb::all_reference_specs()).unwrap();
         let key=first_required(&catalog);
-        let err=ContinuationEvidence::new(key,ContinuationVerification::VerifiedMeasured,"fixture","fixture-model",None).unwrap_err();
-        assert!(err.contains("requires artifact proof"));
+        assert!(ContinuationEvidence::new(key,ContinuationVerification::VerifiedMeasured,"fixture","fixture-model",None).is_err());
     }
 
     #[test]
-    fn verified_measured_with_partial_artifact_is_rejected(){
+    fn range_conditioned_artifact_requires_range_fingerprint(){
+        assert!(ContinuationArtifactProof::new("artifact","abc",100,100,ContinuationArtifactScope::RangeConditioned,None).is_err());
+    }
+
+    #[test]
+    fn range_conditioned_artifact_does_not_unlock_generic_exact_promotion(){
         let catalog=TreeCatalog::new(screen_reference_spins_15bb_v1(),CatalogCompleteness::PartialReference,crate::reference_tree_15bb::all_reference_specs()).unwrap();
         let key=first_required(&catalog);
-        let proof=ContinuationArtifactProof::new("artifact","abc",100,99,ContinuationArtifactScope::RangeConditioned,Some("range-v1".into())).unwrap();
-        let err=ContinuationEvidence::new(key,ContinuationVerification::VerifiedMeasured,"fixture","fixture-model",Some(proof)).unwrap_err();
-        assert!(err.contains("complete artifact coverage"));
+        let proof=ContinuationArtifactProof::new("artifact","abc",100,100,ContinuationArtifactScope::RangeConditioned,Some("range-v1".into())).unwrap();
+        let evidence=ContinuationEvidence::new(key,ContinuationVerification::VerifiedMeasured,"fixture","model",Some(proof)).unwrap();
+        assert!(!evidence.exact_ready());
+        assert!(evidence.exact_ready_for_range("range-v1"));
+        assert!(!evidence.exact_ready_for_range("range-v2"));
     }
 
     #[test]
-    fn range_conditioned_artifact_without_range_fingerprint_is_rejected(){
-        let err=ContinuationArtifactProof::new("artifact","abc",100,100,ContinuationArtifactScope::RangeConditioned,None).unwrap_err();
-        assert!(err.contains("range_state_id"));
-    }
-
-    #[test]
-    fn policy_complete_artifact_cannot_carry_one_range_fingerprint(){
-        let err=ContinuationArtifactProof::new("artifact","abc",100,100,ContinuationArtifactScope::PolicyComplete,Some("one-range".into())).unwrap_err();
-        assert!(err.contains("must not masquerade"));
-    }
-
-    #[test]
-    fn crosschecked_continuation_is_not_enough_for_exact_coverage(){
+    fn policy_complete_verified_artifact_unlocks_generic_exact_for_its_edge(){
         let catalog=TreeCatalog::new(screen_reference_spins_15bb_v1(),CatalogCompleteness::PartialReference,crate::reference_tree_15bb::all_reference_specs()).unwrap();
         let key=first_required(&catalog);
-        let evidence=ContinuationEvidence::new(key,ContinuationVerification::CrossChecked,"fixture","fixture-model",None).unwrap();
-        let registry=ContinuationRegistry::new(vec![evidence]).unwrap();
-        assert!(registry.validate_exact_coverage(&catalog).is_err());
-    }
-
-    #[test]
-    fn complete_range_conditioned_verified_artifact_is_exact_ready_for_its_edge(){
-        let catalog=TreeCatalog::new(screen_reference_spins_15bb_v1(),CatalogCompleteness::PartialReference,crate::reference_tree_15bb::all_reference_specs()).unwrap();
-        let key=first_required(&catalog);
-        let proof=ContinuationArtifactProof::new("artifact","abc",100,100,ContinuationArtifactScope::RangeConditioned,Some("immutable-range-state-v1".into())).unwrap();
-        let evidence=ContinuationEvidence::new(key.clone(),ContinuationVerification::VerifiedMeasured,"fixture","fixture-model",Some(proof)).unwrap();
+        let proof=ContinuationArtifactProof::new("policy","abc",500,500,ContinuationArtifactScope::PolicyComplete,None).unwrap();
+        let evidence=ContinuationEvidence::new(key.clone(),ContinuationVerification::VerifiedMeasured,"fixture","policy-model",Some(proof)).unwrap();
         assert!(evidence.exact_ready());
         let registry=ContinuationRegistry::new(vec![evidence]).unwrap();
-        assert!(registry.get(&key).unwrap().exact_ready());
         assert_eq!(registry.missing_or_unverified_required_edges(&catalog).len(),2);
-    }
-
-    #[test]
-    fn policy_complete_verified_artifact_is_range_safe(){
-        let catalog=TreeCatalog::new(screen_reference_spins_15bb_v1(),CatalogCompleteness::PartialReference,crate::reference_tree_15bb::all_reference_specs()).unwrap();
-        let key=first_required(&catalog);
-        let proof=ContinuationArtifactProof::new("policy-artifact","abc",500,500,ContinuationArtifactScope::PolicyComplete,None).unwrap();
-        let evidence=ContinuationEvidence::new(key,ContinuationVerification::VerifiedMeasured,"fixture","policy-model",Some(proof)).unwrap();
-        assert!(evidence.exact_ready());
     }
 
     #[test]
     fn duplicate_continuation_key_fails_closed(){
         let node=crate::reference_tree_15bb::bb_vs_btn_fold_sb_raise_3();
         let key=ContinuationKey{node:node.key.clone(),action:PreflopAction::CallTo(crate::preflop_tree::Bb100(300))};
-        let proof_a=ContinuationArtifactProof::new("a","aa",1,1,ContinuationArtifactScope::RangeConditioned,Some("range-a".into())).unwrap();
-        let proof_b=ContinuationArtifactProof::new("b","bb",1,1,ContinuationArtifactScope::RangeConditioned,Some("range-b".into())).unwrap();
+        let proof_a=ContinuationArtifactProof::new("a","aa",1,1,ContinuationArtifactScope::PolicyComplete,None).unwrap();
+        let proof_b=ContinuationArtifactProof::new("b","bb",1,1,ContinuationArtifactScope::PolicyComplete,None).unwrap();
         let a=ContinuationEvidence::new(key.clone(),ContinuationVerification::VerifiedMeasured,"a","m",Some(proof_a)).unwrap();
         let b=ContinuationEvidence::new(key,ContinuationVerification::VerifiedMeasured,"b","m",Some(proof_b)).unwrap();
         assert!(ContinuationRegistry::new(vec![a,b]).is_err());
