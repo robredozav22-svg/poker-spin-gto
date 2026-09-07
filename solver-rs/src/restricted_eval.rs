@@ -71,7 +71,7 @@ pub fn evaluate_restricted_sampled_nashconv(
     let mut current=0.0;
     let mut sb_marginal=vec![0.0;COMBO_COUNT];
     let mut sb_jam_value_mass=vec![0.0;COMBO_COUNT];
-    let mut fixed_sb_fold_mass=vec![0.0;COMBO_COUNT]; // indexed by BB combo
+    let mut fixed_sb_fold_mass=vec![0.0;COMBO_COUNT];
     let mut bb_if_fold_mass=vec![0.0;COMBO_COUNT];
     let mut bb_if_call_mass=vec![0.0;COMBO_COUNT];
 
@@ -82,7 +82,7 @@ pub fn evaluate_restricted_sampled_nashconv(
             let p=sb_prior.weights()[i]*bb_prior.weights()[j]/z;
             let c_call=bb_strategy.row(j)[1];
             let eq=cache.get_or_compute(combos[i],combos[j],samples_per_matchup,seed)?;
-            let showdown=expected_two_active_payoff(&call_pot,Seat::Sb,Seat::Bb,eq.hero)?[Seat::Sb as usize];
+            let showdown=expected_two_active_payoff(&call_pot,Seat::Sb,Seat::Bb,eq.hero)[Seat::Sb as usize];
             let jam_vs_bb=(1.0-c_call)*jam_when_bb_folds+c_call*showdown;
             let pair_value=(1.0-s_jam)*fold_ev_sb+s_jam*jam_vs_bb;
             current+=p*pair_value;
