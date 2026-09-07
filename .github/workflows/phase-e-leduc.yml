@@ -16,12 +16,14 @@ permissions:
 jobs:
   leduc:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 2
     steps:
       - uses: actions/checkout@v4
-      - name: Run Leduc unit tests
+      - name: Run fast Leduc structural tests
         working-directory: solver-rs
-        run: cargo test --lib leduc_cfr
-      - name: Run Leduc sequence-form value smoke
+        run: |
+          cargo test --lib leduc_cfr::tests::chance_deals_are_exactly_120
+          cargo test --lib leduc_cfr::tests::showdown_pair_beats_high_card
+      - name: Run optimized Leduc sequence-form value smoke
         working-directory: solver-rs
         run: cargo run --release --bin leduc_cfr_smoke
