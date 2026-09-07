@@ -33,6 +33,7 @@ pub mod preflop_tree;
 pub mod range;
 pub mod range_equity;
 pub mod range_equity3;
+pub mod range_state_fingerprint;
 pub mod reference_tree_15bb;
 pub mod regret;
 pub mod restricted_eval;
