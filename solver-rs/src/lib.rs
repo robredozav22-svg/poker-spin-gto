@@ -1,3 +1,4 @@
+pub mod cards;
 pub mod regret;
 pub mod tree;
 
