@@ -1,10 +1,10 @@
 # Poker Spin GTO — Live Project Recovery Index
 
-Last updated: 2026-09-07 14:55 +05
+Last updated: 2026-09-07 15:00 +05
 Active branch: `chat-aligned-v2`
 Status: `RESEARCH_ONLY`
 Main policy: DO NOT modify `main` until validation gates pass and the user explicitly approves promotion.
-Latest confirmed Rust CI: run `34108519175`, head `cb3a6ab65d63400201570068648c6d1b4b76303f`, SUCCESS.
+Latest confirmed Rust CI: run `34108942617`, head `e0c993d1cc968cde1ddf8ed92c01280cb8b3d0b7`, SUCCESS.
 
 This is the FIRST file to read in a new chat. Detailed immutable milestones live under `docs/checkpoints/`.
 
@@ -35,32 +35,13 @@ Original app charts remain `INVALID_FOR_STRATEGY`. Read `docs/CHART_AUDIT.md` + 
 ## Completed phases
 
 ### Phase A — exact all-in payoff foundation: COMPLETE / RESEARCH_ONLY
-
-Checkpoint: `docs/checkpoints/2026-09-07-exact-allin-phase-a.md`
-
-Confirmed:
-- exact HU C(48,5)=1,712,304 boards;
-- AA vs KK = 0.812554897 / 0.187445103;
-- exact 3-way C(46,5)=1,370,754 boards;
-- AA / KK / QQ = 0.665054415 / 0.188754510 / 0.146191074;
-- exact HU/3-way all-in payoff is canonical research path;
-- sampled equity is cross-check/research only;
-- exact restricted game NashConv = 0.001778596bb at 10k sweeps.
-
-Policy: `docs/PAYOFF_POLICY.md`.
+Checkpoint: `docs/checkpoints/2026-09-07-exact-allin-phase-a.md`.
 
 ### Phase B — generic solver validation: COMPLETE / RESEARCH_ONLY
-
-Checkpoint: `docs/checkpoints/2026-09-07-synthetic-matrix-phase-b.md`
-
-Confirmed:
-- Matching Pennies exact 50/50, value 0, NashConv 0;
-- asymmetric `[[4,0],[-1,2]]` converges near analytical Row 3/7, Column 2/7, value 8/7;
-- at 100k: row error 0.001839403, column error 0.001375967, value error 0.000017717, NashConv 0.007806707.
+Checkpoint: `docs/checkpoints/2026-09-07-synthetic-matrix-phase-b.md`.
 
 ### Phase C — exact payoff precompute / persistence: ACTIVE
-
-Checkpoint: `docs/checkpoints/2026-09-07-payoff-precompute-phase-c.md`
+Base checkpoint: `docs/checkpoints/2026-09-07-payoff-precompute-phase-c.md`.
 
 Full HU canonical census:
 - legal ordered HU pairs: 1,624,350;
@@ -77,92 +58,87 @@ NEVER quote 654,284 as the full 3-way universe.
 
 ## C1 — persistent lookup: COMPLETE / CI CONFIRMED
 
-Implemented:
-- `solver-rs/src/payoff_table.rs`
-- `solver-rs/src/payoff_lookup.rs`
-
-Rules:
-- duplicate/non-canonical stored keys rejected;
+Implemented `payoff_table.rs` + `payoff_lookup.rs`.
+- duplicate/non-canonical keys rejected;
 - missing exact key = explicit `None`;
 - no silent sampled fallback;
 - exact integer outcomes are persistence source of truth.
 
-## C2 — build-only compute-missing generator: COMPLETE / CI CONFIRMED
+## C2 — build-only compute-missing: COMPLETE / CI CONFIRMED
+
+Implemented `payoff_build.rs`.
+- trusted existing records reused;
+- only missing canonical exact keys computed;
+- output sorted canonically;
+- new table returned; no in-place mutation;
+- idempotent same-data build gives byte-identical payload.
+
+## C3 — provenance / integrity: COMPLETE / CI CONFIRMED
+
+Checkpoint: `docs/checkpoints/2026-09-07-payoff-integrity-c3.md`.
+
+Implemented `payoff_manifest.rs`.
+- manifest magic `SPNMAN01`;
+- schema/evaluator/kind/count/length/FNV-1a-64/provenance/timestamp;
+- one-byte payload corruption rejected;
+- FNV is integrity/corruption detection only, not authentication/signature.
+
+## C4 — HU generation economics: COMPLETE / CI CONFIRMED
 
 Implemented:
-- `solver-rs/src/payoff_build.rs`
-- `solver-rs/src/bin/payoff_build_smoke.rs`
+- `solver-rs/src/bin/hu_generation_economics.rs`
 
-Rules:
-- read-only runtime lookup;
-- generator computes only missing canonical exact keys;
-- reuses trusted existing entries;
-- rejects non-canonical/duplicate keys;
-- output canonically sorted;
-- returns a NEW table;
-- same exact data produces byte-identical payload.
+Deterministic batch:
+- 8 unique canonical HU matchup keys;
+- serial, 2-worker, 4-worker exact board enumeration;
+- all exact integer wins/losses/ties identical across modes;
+- final output sorted canonically.
 
-## C3 — artifact provenance / integrity: COMPLETE / CI CONFIRMED
+Measured on GitHub runner in run `34108942617`:
 
-Implemented:
-- `solver-rs/src/payoff_manifest.rs`
-- `solver-rs/src/bin/payoff_manifest_smoke.rs`
+SERIAL 1 worker:
+- 8 keys = 1.786770 sec;
+- 4.477354 keys/sec;
+- projected 93,769-key full HU build = 20,942.949 sec = 349.049 min = about 5.82 h.
 
-Sidecar manifest magic: `SPNMAN01`.
+PARALLEL 2 workers:
+- 8 keys = 0.891578 sec;
+- 8.972857 keys/sec;
+- projected full HU build = 10,450.295 sec = 174.172 min = about 2.90 h;
+- speedup vs serial = 2.004053x.
 
-Manifest records:
-- table schema version;
-- evaluator schema version;
-- HU/THREEWAY kind;
-- exact record count;
-- payload byte length;
-- deterministic FNV-1a-64 payload checksum;
-- externally supplied generation provenance;
-- externally supplied generation timestamp.
+PARALLEL 4 workers:
+- 8 keys = 0.825582 sec;
+- 9.690138 keys/sec;
+- projected full HU build = 9,676.746 sec = 161.279 min = about 2.69 h;
+- speedup vs serial = 2.164255x.
 
-Integrity policy:
-- FNV-1a-64 is used for deterministic corruption/integrity detection only;
-- it is NOT a cryptographic authentication/signature mechanism;
-- manifest rejects schema/kind/count/length/checksum mismatch;
-- payload is also run through the existing fail-closed HU/3-way table decoder;
-- modifying one payload byte is rejected.
+Interpretation:
+- 2-worker scaling is essentially ideal on this runner;
+- 4 workers bring only modest gain beyond 2, consistent with runner CPU contention/capacity;
+- projected full-table times are estimates from this 8-key batch, NOT measured 93,769-key runtimes;
+- do not start full generation inside normal CI.
 
-Latest C3 smoke:
-- HU records=1;
-- payload=60 bytes;
-- checksum `599f53c643122fcf`;
-- manifest=217 bytes;
-- corruption check=`REJECT`.
+Latest gate:
+- run `34108942617` = SUCCESS;
+- 91/91 library tests pass;
+- all prior exact/persistence/manifest gates remain green.
 
-Latest full Rust gate:
-- run `34108519175`;
-- head `cb3a6ab65d63400201570068648c6d1b4b76303f`;
-- SUCCESS;
-- 91/91 library tests passed;
-- all prior exact equity, leaf, NashConv, synthetic, census, lookup and compute-missing gates also remained green.
-
-## CURRENT NEXT STEP — C4 generation economics
+## CURRENT NEXT STEP — C5 solver integration
 
 Continue here:
 
-1. Build a deterministic representative batch of unique canonical HU keys; do not generate all 93,769 yet.
-2. Benchmark exact board enumeration serially.
-3. Benchmark controlled parallelism using std threads (target 2 and 4 workers if runner exposes capacity).
-4. Require exact integer outcomes to match between serial and parallel results.
-5. Report measured wall-clock keys/sec for each mode.
-6. Derive a clearly labelled estimate for the full 93,769-key HU table from the measured batch. Do not claim it as measured full-generation runtime.
-7. Keep benchmark batch small enough for CI; target around 8 unique keys initially.
-8. Preserve deterministic sorted output regardless of worker completion order.
-9. If parallel slowdown occurs due runner CPU limits, record it rather than hiding it.
-10. Do not start full HU generation until economics are measured and artifact-generation workflow is designed.
-11. For 3-way, derive required canonical key sets from concrete target tree/support branches before large generation.
-
-### After C4 — C5 solver integration
-
-12. Prefer persistent exact table lookup for repeated all-in leaf queries.
-13. Direct exact enumeration remains build/fallback research tool, not repeated inner-loop work.
-14. Never silently fall back to sampled payoff.
-15. Only after C5 benchmark broader/full 1,326-support restricted games.
+1. Add table-backed exact HU range-equity integration using `HuPayoffLookup`.
+2. Add table-backed exact 3-way joint-range integration using `ThreeWayPayoffLookup`.
+3. Missing required canonical payoff key must return an explicit error/fail closed.
+4. Never fall back automatically to sampled equity.
+5. Add table-backed versions of supported all-in terminal leaf operators:
+   - HU BB Fold/Call leaves;
+   - `BTN jam -> SB call -> BB Fold/Call` genuine 3-way leaf.
+6. Keep current direct exact enumeration functions as build/research fallback tools, not silent runtime fallback.
+7. Prove table-backed leaf values equal direct exact values on AA/KK and AA/KK/QQ fixtures.
+8. Add CI smoke for complete-table hit and deliberate missing-key failure.
+9. After C5 is green, benchmark broader combo-support restricted games using precomputed table-backed payoffs rather than board enumeration inside repeated solve runs.
 
 ## Later phases — do not jump ahead
 
@@ -195,6 +171,6 @@ Before chart promotion:
 4. Read `docs/PAYOFF_POLICY.md`.
 5. Inspect latest commits on `chat-aligned-v2`.
 6. Inspect newest `Rust Solver Core` CI.
-7. Continue from **CURRENT NEXT STEP — C4**.
+7. Continue from **CURRENT NEXT STEP — C5**.
 
-Do not redo completed A/B/C1/C2/C3 work unless evaluator/schema/game assumptions deliberately change.
+Do not redo completed A/B/C1/C2/C3/C4 work unless evaluator/schema/game assumptions deliberately change.
