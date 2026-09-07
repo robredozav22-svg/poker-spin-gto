@@ -1,15 +1,6 @@
-name: 3Max External Solver Benchmark
+name: 3Max External Solver Benchmark [ARCHIVED]
 
 on:
-  pull_request:
-    paths:
-      - 'solver/three_max_external_mccfr.py'
-      - 'solver/run_three_max_external.py'
-      - 'solver/run_three_max_external_convergence.py'
-      - 'solver/convergence.py'
-      - 'tests/test_solver.py'
-      - 'tests/test_external_solver.py'
-      - '.github/workflows/solver-three-max-external.yml'
   workflow_dispatch:
 
 permissions:
