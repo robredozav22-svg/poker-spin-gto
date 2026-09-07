@@ -19,11 +19,9 @@ pub enum GameFormat{
 
 #[derive(Debug,Clone,Copy,PartialEq,Eq,Hash)]
 pub enum PayoutProfile{
-    /// Chip-EV / winner-take-all research baseline. This must not be reused for
-    /// multi-place multiplier ICM without an explicit separate profile.
     WinnerTakeAllChipEv,
-    /// Explicit externally defined profile identifier. The ID is metadata only;
-    /// its payout vector must be supplied/validated elsewhere before solving.
+    /// Metadata ID only. Its actual payout vector must be defined and validated
+    /// before any solver run may use this profile.
     ExplicitIcmProfile(u32),
 }
 
@@ -97,22 +95,13 @@ impl TreeEvidence{
     }
 }
 
-/// Contract for what mathematical object is required after an action.
-/// This prevents non-all-in continuations from being silently valued with raw
-/// showdown equity.
+/// Contract for the mathematical object required after an action.
 #[derive(Debug,Clone,Copy,PartialEq,Eq,Hash)]
 pub enum ContinuationContract{
-    /// Another explicitly keyed preflop decision follows.
     ChildDecision,
-    /// Hand terminates by folds; chip settlement is exact without showdown.
     ExactFoldSettlement,
-    /// All active players are all-in; exact common-board payoff infrastructure
-    /// is eligible for this terminal.
     ExactAllInShowdown,
-    /// Chips remain behind after preflop and continuation value must come from a
-    /// measured postflop solver/continuation EV source.
     RequiresPostflopEv,
-    /// Tree source is incomplete. Solver must fail closed.
     Unresolved,
 }
 
@@ -151,24 +140,35 @@ fn validate_action_amount(action:PreflopAction,stack:Bb100)->Result<(),String>{
         if amount.0==0{return Err("preflop action amount must be positive".into());}
         if amount>stack{return Err(format!("preflop action amount {:.2}bb exceeds effective stack {:.2}bb",amount.as_bb(),stack.as_bb()));}
     }
-    if let PreflopAction::JamTo(amount)=action{
-        if amount!=stack{return Err(format!("JamTo {:.2}bb must equal effective stack {:.2}bb",amount.as_bb(),stack.as_bb()));}
+    match action{
+        PreflopAction::JamTo(amount) if amount!=stack=>Err(format!("JamTo {:.2}bb must equal effective stack {:.2}bb",amount.as_bb(),stack.as_bb())),
+        PreflopAction::RaiseTo(amount) if amount==stack=>Err("RaiseTo at the effective stack is non-canonical; use JamTo".into()),
+        _=>Ok(()),
     }
-    Ok(())
 }
 
 fn validate_continuation_contract(edge:&ActionEdge,stack:Bb100)->Result<(),String>{
     match (edge.action,edge.continuation){
-        (PreflopAction::Fold,ContinuationContract::ExactFoldSettlement)=>Ok(()),
-        (PreflopAction::Fold,other)=>Err(format!("Fold must use ExactFoldSettlement, got {other:?}")),
-        // JamTo validity (amount == effective stack) is already enforced by
-        // validate_action_amount before this function is called.
-        (PreflopAction::JamTo(_),ContinuationContract::ExactAllInShowdown)=>Ok(()),
-        // A jam can lead to another player's response before showdown.
-        (PreflopAction::JamTo(_),ContinuationContract::ChildDecision)=>Ok(()),
+        // In multi-player preflop a fold may either end the hand or pass action
+        // to another remaining player.
+        (PreflopAction::Fold,ContinuationContract::ExactFoldSettlement|ContinuationContract::ChildDecision|ContinuationContract::Unresolved)=>Ok(()),
+        (PreflopAction::Fold,ContinuationContract::RequiresPostflopEv)=>Err("Fold cannot directly require postflop continuation EV".into()),
+        (PreflopAction::Fold,ContinuationContract::ExactAllInShowdown)=>Err("Fold cannot directly create an all-in showdown contract".into()),
+
+        // JamTo validity (amount == effective stack) is enforced separately.
+        (PreflopAction::JamTo(_),ContinuationContract::ExactAllInShowdown|ContinuationContract::ChildDecision|ContinuationContract::Unresolved)=>Ok(()),
         (PreflopAction::JamTo(_),ContinuationContract::RequiresPostflopEv)=>Err("all-in jam cannot require postflop continuation EV".into()),
+        (PreflopAction::JamTo(_),ContinuationContract::ExactFoldSettlement)=>Err("JamTo cannot itself use ExactFoldSettlement".into()),
+
+        // An all-in call may complete showdown or, in a 3-player hand, pass the
+        // decision to the third player. It must not be valued as postflop play.
+        (PreflopAction::CallTo(amount),ContinuationContract::ExactAllInShowdown|ContinuationContract::ChildDecision) if amount==stack=>Ok(()),
+        (PreflopAction::CallTo(amount),ContinuationContract::RequiresPostflopEv) if amount==stack=>Err("all-in CallTo cannot require postflop continuation EV".into()),
+        (PreflopAction::CallTo(_),ContinuationContract::RequiresPostflopEv|ContinuationContract::ChildDecision|ContinuationContract::Unresolved)=>Ok(()),
+
         (PreflopAction::RaiseTo(amount),ContinuationContract::ExactAllInShowdown) if amount<stack=>Err("non-all-in raise cannot be marked ExactAllInShowdown".into()),
-        (PreflopAction::LimpTo(_)|PreflopAction::CallTo(_)|PreflopAction::RaiseTo(_)|PreflopAction::Check,ContinuationContract::RequiresPostflopEv|ContinuationContract::ChildDecision|ContinuationContract::Unresolved)=>Ok(()),
+        (PreflopAction::LimpTo(_)|PreflopAction::RaiseTo(_)|PreflopAction::Check,ContinuationContract::RequiresPostflopEv|ContinuationContract::ChildDecision|ContinuationContract::Unresolved)=>Ok(()),
+
         (_,ContinuationContract::Unresolved)=>Ok(()),
         (_,ContinuationContract::ExactFoldSettlement)=>Err("non-fold action cannot use ExactFoldSettlement".into()),
         (_,ContinuationContract::ExactAllInShowdown)=>Err("action is not proven to complete an all-in showdown".into()),
@@ -180,85 +180,76 @@ mod tests{
     use super::*;
 
     fn root(stack:u16)->PreflopNodeKey{
-        PreflopNodeKey::new(
-            GameFormat::Spin3Max,
-            PayoutProfile::WinnerTakeAllChipEv,
-            Bb100(stack),
-            Player::Btn,
-            vec![],
-        ).unwrap()
+        PreflopNodeKey::new(GameFormat::Spin3Max,PayoutProfile::WinnerTakeAllChipEv,Bb100(stack),Player::Btn,vec![]).unwrap()
     }
 
     #[test]
     fn sizing_is_part_of_node_identity(){
-        let a=PreflopNodeKey::new(
-            GameFormat::Spin3Max,PayoutProfile::WinnerTakeAllChipEv,Bb100(1500),Player::Sb,
-            vec![HistoryEvent{actor:Player::Btn,action:PreflopAction::RaiseTo(Bb100(200))}],
-        ).unwrap();
-        let b=PreflopNodeKey::new(
-            GameFormat::Spin3Max,PayoutProfile::WinnerTakeAllChipEv,Bb100(1500),Player::Sb,
-            vec![HistoryEvent{actor:Player::Btn,action:PreflopAction::RaiseTo(Bb100(250))}],
-        ).unwrap();
+        let a=PreflopNodeKey::new(GameFormat::Spin3Max,PayoutProfile::WinnerTakeAllChipEv,Bb100(1500),Player::Sb,vec![HistoryEvent{actor:Player::Btn,action:PreflopAction::RaiseTo(Bb100(200))}]).unwrap();
+        let b=PreflopNodeKey::new(GameFormat::Spin3Max,PayoutProfile::WinnerTakeAllChipEv,Bb100(1500),Player::Sb,vec![HistoryEvent{actor:Player::Btn,action:PreflopAction::RaiseTo(Bb100(250))}]).unwrap();
         assert_ne!(a,b);
     }
 
     #[test]
     fn action_order_and_actor_are_part_of_node_identity(){
-        let a=PreflopNodeKey::new(
-            GameFormat::Spin3Max,PayoutProfile::WinnerTakeAllChipEv,Bb100(1500),Player::Bb,
-            vec![
-                HistoryEvent{actor:Player::Btn,action:PreflopAction::RaiseTo(Bb100(200))},
-                HistoryEvent{actor:Player::Sb,action:PreflopAction::CallTo(Bb100(200))},
-            ],
-        ).unwrap();
-        let b=PreflopNodeKey::new(
-            GameFormat::Spin3Max,PayoutProfile::WinnerTakeAllChipEv,Bb100(1500),Player::Bb,
-            vec![
-                HistoryEvent{actor:Player::Btn,action:PreflopAction::Fold},
-                HistoryEvent{actor:Player::Sb,action:PreflopAction::RaiseTo(Bb100(200))},
-            ],
-        ).unwrap();
+        let a=PreflopNodeKey::new(GameFormat::Spin3Max,PayoutProfile::WinnerTakeAllChipEv,Bb100(1500),Player::Bb,vec![HistoryEvent{actor:Player::Btn,action:PreflopAction::RaiseTo(Bb100(200))},HistoryEvent{actor:Player::Sb,action:PreflopAction::CallTo(Bb100(200))}]).unwrap();
+        let b=PreflopNodeKey::new(GameFormat::Spin3Max,PayoutProfile::WinnerTakeAllChipEv,Bb100(1500),Player::Bb,vec![HistoryEvent{actor:Player::Btn,action:PreflopAction::Fold},HistoryEvent{actor:Player::Sb,action:PreflopAction::RaiseTo(Bb100(200))}]).unwrap();
         assert_ne!(a,b);
     }
 
     #[test]
+    fn btn_fold_can_pass_action_to_sb(){
+        let spec=PreflopDecisionSpec::new(root(1500),vec![
+            ActionEdge{action:PreflopAction::Fold,continuation:ContinuationContract::ChildDecision},
+            ActionEdge{action:PreflopAction::JamTo(Bb100(1500)),continuation:ContinuationContract::ChildDecision},
+        ],TreeEvidence::new(TreeVerification::ScreenReference,"fixture").unwrap()).unwrap();
+        assert_eq!(spec.edges[0].continuation,ContinuationContract::ChildDecision);
+    }
+
+    #[test]
+    fn allin_call_can_complete_showdown(){
+        let key=PreflopNodeKey::new(GameFormat::SpinHeadsUp,PayoutProfile::WinnerTakeAllChipEv,Bb100(800),Player::Bb,vec![HistoryEvent{actor:Player::Sb,action:PreflopAction::JamTo(Bb100(800))}]).unwrap();
+        let spec=PreflopDecisionSpec::new(key,vec![
+            ActionEdge{action:PreflopAction::Fold,continuation:ContinuationContract::ExactFoldSettlement},
+            ActionEdge{action:PreflopAction::CallTo(Bb100(800)),continuation:ContinuationContract::ExactAllInShowdown},
+        ],TreeEvidence::new(TreeVerification::VerifiedExactTree,"fixture").unwrap()).unwrap();
+        assert_eq!(spec.edges[1].continuation,ContinuationContract::ExactAllInShowdown);
+    }
+
+    #[test]
     fn non_allin_raise_cannot_be_declared_exact_showdown(){
-        let evidence=TreeEvidence::new(TreeVerification::ScreenReference,"fixture").unwrap();
-        let err=PreflopDecisionSpec::new(
-            root(1500),
-            vec![
-                ActionEdge{action:PreflopAction::Fold,continuation:ContinuationContract::ExactFoldSettlement},
-                ActionEdge{action:PreflopAction::RaiseTo(Bb100(200)),continuation:ContinuationContract::ExactAllInShowdown},
-            ],
-            evidence,
-        ).unwrap_err();
+        let err=PreflopDecisionSpec::new(root(1500),vec![
+            ActionEdge{action:PreflopAction::Fold,continuation:ContinuationContract::ChildDecision},
+            ActionEdge{action:PreflopAction::RaiseTo(Bb100(200)),continuation:ContinuationContract::ExactAllInShowdown},
+        ],TreeEvidence::new(TreeVerification::ScreenReference,"fixture").unwrap()).unwrap_err();
         assert!(err.contains("non-all-in raise"));
     }
 
     #[test]
     fn non_allin_path_can_require_postflop_ev(){
-        let evidence=TreeEvidence::new(TreeVerification::ScreenReference,"fixture").unwrap();
-        let spec=PreflopDecisionSpec::new(
-            root(1500),
-            vec![
-                ActionEdge{action:PreflopAction::Fold,continuation:ContinuationContract::ExactFoldSettlement},
-                ActionEdge{action:PreflopAction::RaiseTo(Bb100(200)),continuation:ContinuationContract::RequiresPostflopEv},
-                ActionEdge{action:PreflopAction::JamTo(Bb100(1500)),continuation:ContinuationContract::ChildDecision},
-            ],evidence,
-        ).unwrap();
+        let spec=PreflopDecisionSpec::new(root(1500),vec![
+            ActionEdge{action:PreflopAction::Fold,continuation:ContinuationContract::ChildDecision},
+            ActionEdge{action:PreflopAction::RaiseTo(Bb100(200)),continuation:ContinuationContract::ChildDecision},
+            ActionEdge{action:PreflopAction::JamTo(Bb100(1500)),continuation:ContinuationContract::ChildDecision},
+        ],TreeEvidence::new(TreeVerification::ScreenReference,"fixture").unwrap()).unwrap();
         assert_eq!(spec.edges.len(),3);
     }
 
     #[test]
+    fn raise_to_stack_is_rejected_in_favor_of_jam(){
+        let err=PreflopDecisionSpec::new(root(1500),vec![
+            ActionEdge{action:PreflopAction::Fold,continuation:ContinuationContract::ChildDecision},
+            ActionEdge{action:PreflopAction::RaiseTo(Bb100(1500)),continuation:ContinuationContract::ChildDecision},
+        ],TreeEvidence::new(TreeVerification::MissingExact,"fixture").unwrap()).unwrap_err();
+        assert!(err.contains("use JamTo"));
+    }
+
+    #[test]
     fn jam_amount_must_equal_effective_stack(){
-        let err=PreflopDecisionSpec::new(
-            root(1500),
-            vec![
-                ActionEdge{action:PreflopAction::Fold,continuation:ContinuationContract::ExactFoldSettlement},
-                ActionEdge{action:PreflopAction::JamTo(Bb100(1499)),continuation:ContinuationContract::ChildDecision},
-            ],
-            TreeEvidence::new(TreeVerification::MissingExact,"fixture").unwrap(),
-        ).unwrap_err();
+        let err=PreflopDecisionSpec::new(root(1500),vec![
+            ActionEdge{action:PreflopAction::Fold,continuation:ContinuationContract::ChildDecision},
+            ActionEdge{action:PreflopAction::JamTo(Bb100(1499)),continuation:ContinuationContract::ChildDecision},
+        ],TreeEvidence::new(TreeVerification::MissingExact,"fixture").unwrap()).unwrap_err();
         assert!(err.contains("must equal effective stack"));
     }
 
