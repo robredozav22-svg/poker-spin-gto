@@ -14,6 +14,7 @@ pub mod range_equity3;
 pub mod regret;
 pub mod restricted_subgame;
 pub mod sb_ev;
+pub mod strategy_metrics;
 pub mod strategy_range;
 pub mod terminal;
 pub mod terminal_ev;
