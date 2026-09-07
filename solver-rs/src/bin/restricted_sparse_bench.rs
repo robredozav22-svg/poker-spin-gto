@@ -21,38 +21,52 @@ fn main(){
     let mut game=SbJamBbResponseSubgame::new(8.0,sb_prior.clone(),bb_prior.clone())
         .expect("subgame construction");
 
-    let mut prev_sb=game.sb_current_strategy();
-    let mut prev_bb=game.bb_current_strategy();
     let samples_per_matchup=500u64;
     let seed=20260907u64;
+    let checkpoints=[1usize,5,10,20,50,100];
+
+    let mut prev_checkpoint_sb=game.sb_current_strategy();
+    let mut prev_checkpoint_bb=game.bb_current_strategy();
+    let mut prev_checkpoint_sb_avg=game.sb_average_strategy();
+    let mut prev_checkpoint_bb_avg=game.bb_average_strategy();
 
     println!("status=RESEARCH_ONLY stack_bb=8 samples_per_matchup={samples_per_matchup} seed={seed}");
-    println!("support sb=3 bb=3 sweeps=20");
+    println!("support sb=3 bb=3 sweeps=100 checkpoints=1,5,10,20,50,100");
 
-    for sweep in 1..=20{
+    for sweep in 1..=100{
         let d=game.sweep(samples_per_matchup,seed).expect("sweep");
-        let sb=game.sb_current_strategy();
-        let bb=game.bb_current_strategy();
-        if sweep==1 || sweep%5==0{
+        if checkpoints.contains(&sweep){
+            let sb=game.sb_current_strategy();
+            let bb=game.bb_current_strategy();
+            let sb_avg=game.sb_average_strategy();
+            let bb_avg=game.bb_average_strategy();
+
             let sb_jam=marginal_action_probability(&sb_prior,&sb,1).unwrap();
             let bb_call=marginal_action_probability(&bb_prior,&bb,1).unwrap();
-            let sb_max=max_action_delta_on_support(&sb_prior,&prev_sb,&sb).unwrap();
-            let bb_max=max_action_delta_on_support(&bb_prior,&prev_bb,&bb).unwrap();
-            let sb_mae=weighted_action_mae(&sb_prior,&prev_sb,&sb).unwrap();
-            let bb_mae=weighted_action_mae(&bb_prior,&prev_bb,&bb).unwrap();
+            let sb_avg_jam=marginal_action_probability(&sb_prior,&sb_avg,1).unwrap();
+            let bb_avg_call=marginal_action_probability(&bb_prior,&bb_avg,1).unwrap();
+
+            let sb_current_max=max_action_delta_on_support(&sb_prior,&prev_checkpoint_sb,&sb).unwrap();
+            let bb_current_max=max_action_delta_on_support(&bb_prior,&prev_checkpoint_bb,&bb).unwrap();
+            let sb_current_mae=weighted_action_mae(&sb_prior,&prev_checkpoint_sb,&sb).unwrap();
+            let bb_current_mae=weighted_action_mae(&bb_prior,&prev_checkpoint_bb,&bb).unwrap();
+
+            let sb_avg_max=max_action_delta_on_support(&sb_prior,&prev_checkpoint_sb_avg,&sb_avg).unwrap();
+            let bb_avg_max=max_action_delta_on_support(&bb_prior,&prev_checkpoint_bb_avg,&bb_avg).unwrap();
+            let sb_avg_mae=weighted_action_mae(&sb_prior,&prev_checkpoint_sb_avg,&sb_avg).unwrap();
+            let bb_avg_mae=weighted_action_mae(&bb_prior,&prev_checkpoint_bb_avg,&bb_avg).unwrap();
+
             println!(
-                "sweep={sweep} sb_jam={sb_jam:.6} bb_call={bb_call:.6} sb_max_delta={sb_max:.6} bb_max_delta={bb_max:.6} sb_weighted_mae={sb_mae:.6} bb_weighted_mae={bb_mae:.6} mean_bb_jam_reach={:.6} cache_hits={} cache_misses={}",
+                "sweep={sweep} current_sb_jam={sb_jam:.6} current_bb_call={bb_call:.6} avg_sb_jam={sb_avg_jam:.6} avg_bb_call={bb_avg_call:.6} current_sb_max={sb_current_max:.6} current_bb_max={bb_current_max:.6} current_sb_mae={sb_current_mae:.6} current_bb_mae={bb_current_mae:.6} avg_sb_max={sb_avg_max:.6} avg_bb_max={bb_avg_max:.6} avg_sb_mae={sb_avg_mae:.6} avg_bb_mae={bb_avg_mae:.6} mean_bb_jam_reach={:.6} cache_hits={} cache_misses={}",
                 d.mean_bb_jam_reach,d.hu_cache_hits,d.hu_cache_misses
             );
+
+            prev_checkpoint_sb=sb;
+            prev_checkpoint_bb=bb;
+            prev_checkpoint_sb_avg=sb_avg;
+            prev_checkpoint_bb_avg=bb_avg;
         }
-        prev_sb=sb;
-        prev_bb=bb;
     }
 
-    let sb_avg=game.sb_average_strategy();
-    let bb_avg=game.bb_average_strategy();
-    let sb_avg_jam=marginal_action_probability(&sb_prior,&sb_avg,1).unwrap();
-    let bb_avg_call=marginal_action_probability(&bb_prior,&bb_avg,1).unwrap();
-    println!("average_strategy sb_jam={sb_avg_jam:.6} bb_call={bb_avg_call:.6}");
-    println!("NOTE: stability diagnostics only; not NashConv and not chart data");
+    println!("NOTE: checkpoint stability diagnostics only; not NashConv, not exploitability, and not chart data");
 }
