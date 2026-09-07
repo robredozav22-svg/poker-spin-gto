@@ -25,9 +25,9 @@ fn main(){
     let mut train_eval_cache=EquityCache::new();
     let mut holdout_eval_cache=EquityCache::new();
 
-    let train_samples=500u64;
+    let train_samples=10_000u64;
     let train_seed=20260907u64;
-    let holdout_samples=10_000u64;
+    let holdout_samples=50_000u64;
     let holdout_seed=20260917u64;
     let checkpoints=[1usize,5,10,20,50,100,200,500,1000];
 
