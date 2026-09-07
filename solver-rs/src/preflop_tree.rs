@@ -161,9 +161,11 @@ fn validate_continuation_contract(edge:&ActionEdge,stack:Bb100)->Result<(),Strin
     match (edge.action,edge.continuation){
         (PreflopAction::Fold,ContinuationContract::ExactFoldSettlement)=>Ok(()),
         (PreflopAction::Fold,other)=>Err(format!("Fold must use ExactFoldSettlement, got {other:?}")),
-        (PreflopAction::JamTo(amount),ContinuationContract::ExactAllInShowdown) if amount==stack=>Ok(()),
-        // A jam can also lead to a child response decision before showdown.
-        (PreflopAction::JamTo(amount),ContinuationContract::ChildDecision) if amount==stack=>Ok(()),
+        // JamTo validity (amount == effective stack) is already enforced by
+        // validate_action_amount before this function is called.
+        (PreflopAction::JamTo(_),ContinuationContract::ExactAllInShowdown)=>Ok(()),
+        // A jam can lead to another player's response before showdown.
+        (PreflopAction::JamTo(_),ContinuationContract::ChildDecision)=>Ok(()),
         (PreflopAction::JamTo(_),ContinuationContract::RequiresPostflopEv)=>Err("all-in jam cannot require postflop continuation EV".into()),
         (PreflopAction::RaiseTo(amount),ContinuationContract::ExactAllInShowdown) if amount<stack=>Err("non-all-in raise cannot be marked ExactAllInShowdown".into()),
         (PreflopAction::LimpTo(_)|PreflopAction::CallTo(_)|PreflopAction::RaiseTo(_)|PreflopAction::Check,ContinuationContract::RequiresPostflopEv|ContinuationContract::ChildDecision|ContinuationContract::Unresolved)=>Ok(()),
