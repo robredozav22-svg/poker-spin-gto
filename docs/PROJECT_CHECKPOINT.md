@@ -1,10 +1,10 @@
 # Poker Spin GTO — Live Project Recovery Index
 
-Last updated: 2026-09-07 14:50 +05
+Last updated: 2026-09-07 14:55 +05
 Active branch: `chat-aligned-v2`
 Status: `RESEARCH_ONLY`
 Main policy: DO NOT modify `main` until validation gates pass and the user explicitly approves promotion.
-Latest confirmed Rust CI: run `34108126766`, head `f731a192c7cb2fb02a9340a80e3ec50916d078fe`, SUCCESS.
+Latest confirmed Rust CI: run `34108519175`, head `cb3a6ab65d63400201570068648c6d1b4b76303f`, SUCCESS.
 
 This is the FIRST file to read in a new chat. Detailed immutable milestones live under `docs/checkpoints/`.
 
@@ -36,8 +36,7 @@ Original app charts remain `INVALID_FOR_STRATEGY`. Read `docs/CHART_AUDIT.md` + 
 
 ### Phase A — exact all-in payoff foundation: COMPLETE / RESEARCH_ONLY
 
-Checkpoint:
-`docs/checkpoints/2026-09-07-exact-allin-phase-a.md`
+Checkpoint: `docs/checkpoints/2026-09-07-exact-allin-phase-a.md`
 
 Confirmed:
 - exact HU C(48,5)=1,712,304 boards;
@@ -52,8 +51,7 @@ Policy: `docs/PAYOFF_POLICY.md`.
 
 ### Phase B — generic solver validation: COMPLETE / RESEARCH_ONLY
 
-Checkpoint:
-`docs/checkpoints/2026-09-07-synthetic-matrix-phase-b.md`
+Checkpoint: `docs/checkpoints/2026-09-07-synthetic-matrix-phase-b.md`
 
 Confirmed:
 - Matching Pennies exact 50/50, value 0, NashConv 0;
@@ -62,8 +60,7 @@ Confirmed:
 
 ### Phase C — exact payoff precompute / persistence: ACTIVE
 
-Checkpoint:
-`docs/checkpoints/2026-09-07-payoff-precompute-phase-c.md`
+Checkpoint: `docs/checkpoints/2026-09-07-payoff-precompute-phase-c.md`
 
 Full HU canonical census:
 - legal ordered HU pairs: 1,624,350;
@@ -84,25 +81,11 @@ Implemented:
 - `solver-rs/src/payoff_table.rs`
 - `solver-rs/src/payoff_lookup.rs`
 
-Format v1:
-- magic `SPNPAY01`;
-- table/evaluator schema versions;
-- HU/3-way kind;
-- exact board-count provenance;
-- canonical key;
-- exact integer outcome counts.
-
-Lookup policy:
-- duplicate canonical keys = reject;
-- non-canonical stored keys = reject;
-- missing key = explicit `None`;
-- NEVER substitute sampled equity silently.
-
-CI persisted lookup fixture:
-- HU AA/KK reload = 0.812554897;
-- 3-way AA/KK/QQ reload = 0.665054415 / 0.188754510 / 0.146191074;
-- integer outcomes match direct exact enumeration;
-- 3-way reconstructed floating equity uses 1e-12 tolerance because direct enumeration accumulates `1/3` tie shares iteratively while persistence reconstructs from exact integer tie counts. Integer counts are source of truth.
+Rules:
+- duplicate/non-canonical stored keys rejected;
+- missing exact key = explicit `None`;
+- no silent sampled fallback;
+- exact integer outcomes are persistence source of truth.
 
 ## C2 — build-only compute-missing generator: COMPLETE / CI CONFIRMED
 
@@ -111,57 +94,75 @@ Implemented:
 - `solver-rs/src/bin/payoff_build_smoke.rs`
 
 Rules:
-- runtime lookup remains read-only;
-- input = requested canonical keys + optional existing trusted table;
-- non-canonical keys rejected;
-- duplicate existing keys rejected;
-- existing requested keys reused;
-- only missing exact keys computed;
-- output records canonically sorted;
-- generator returns a NEW table; no trusted artifact mutation in place;
-- same exact data produces byte-identical encoded table.
+- read-only runtime lookup;
+- generator computes only missing canonical exact keys;
+- reuses trusted existing entries;
+- rejects non-canonical/duplicate keys;
+- output canonically sorted;
+- returns a NEW table;
+- same exact data produces byte-identical payload.
 
-CI smoke:
-- first HU build computed 1;
-- incremental HU build reused 1, computed 1 new key;
-- idempotent HU rebuild computed 0 and produced byte-identical output;
-- first 3-way build computed 1;
-- repeated 3-way build reused 1, recomputed 0;
-- 89/89 Rust library tests passed.
+## C3 — artifact provenance / integrity: COMPLETE / CI CONFIRMED
 
-Latest full gate: run `34108126766` = SUCCESS.
+Implemented:
+- `solver-rs/src/payoff_manifest.rs`
+- `solver-rs/src/bin/payoff_manifest_smoke.rs`
 
-## CURRENT NEXT STEP — C3 provenance / integrity
+Sidecar manifest magic: `SPNMAN01`.
+
+Manifest records:
+- table schema version;
+- evaluator schema version;
+- HU/THREEWAY kind;
+- exact record count;
+- payload byte length;
+- deterministic FNV-1a-64 payload checksum;
+- externally supplied generation provenance;
+- externally supplied generation timestamp.
+
+Integrity policy:
+- FNV-1a-64 is used for deterministic corruption/integrity detection only;
+- it is NOT a cryptographic authentication/signature mechanism;
+- manifest rejects schema/kind/count/length/checksum mismatch;
+- payload is also run through the existing fail-closed HU/3-way table decoder;
+- modifying one payload byte is rejected.
+
+Latest C3 smoke:
+- HU records=1;
+- payload=60 bytes;
+- checksum `599f53c643122fcf`;
+- manifest=217 bytes;
+- corruption check=`REJECT`.
+
+Latest full Rust gate:
+- run `34108519175`;
+- head `cb3a6ab65d63400201570068648c6d1b4b76303f`;
+- SUCCESS;
+- 91/91 library tests passed;
+- all prior exact equity, leaf, NashConv, synthetic, census, lookup and compute-missing gates also remained green.
+
+## CURRENT NEXT STEP — C4 generation economics
 
 Continue here:
 
-1. Add deterministic artifact integrity checksum/hash over encoded payoff payload.
-2. Keep checksum purpose explicit: corruption/integrity detection, not authentication unless cryptographic hashing is used.
-3. Add sidecar/versioned manifest containing at minimum:
-   - table schema version;
-   - evaluator schema version;
-   - HU/3-way kind;
-   - exact record count;
-   - payload byte length;
-   - payload checksum/hash;
-   - generation provenance / solver-core revision supplied by build caller;
-   - generation timestamp supplied externally, not used in deterministic payload bytes.
-4. Add manifest verification that fails closed on payload mismatch.
-5. Preserve canonical sorted ordering for reproducible payload bytes.
-6. Do not add network or runtime mutation to solver lookup.
-
-### After C3 — C4 generation economics
-
-7. Benchmark exact HU batch generation with controlled parallelism.
-8. Measure throughput on a representative key batch.
-9. Estimate full 93,769-key HU generation time from measured batch throughput.
-10. Derive 3-way required keys from concrete target branches/supports before any large generation.
+1. Build a deterministic representative batch of unique canonical HU keys; do not generate all 93,769 yet.
+2. Benchmark exact board enumeration serially.
+3. Benchmark controlled parallelism using std threads (target 2 and 4 workers if runner exposes capacity).
+4. Require exact integer outcomes to match between serial and parallel results.
+5. Report measured wall-clock keys/sec for each mode.
+6. Derive a clearly labelled estimate for the full 93,769-key HU table from the measured batch. Do not claim it as measured full-generation runtime.
+7. Keep benchmark batch small enough for CI; target around 8 unique keys initially.
+8. Preserve deterministic sorted output regardless of worker completion order.
+9. If parallel slowdown occurs due runner CPU limits, record it rather than hiding it.
+10. Do not start full HU generation until economics are measured and artifact-generation workflow is designed.
+11. For 3-way, derive required canonical key sets from concrete target tree/support branches before large generation.
 
 ### After C4 — C5 solver integration
 
-11. Prefer persistent exact table lookup in repeated all-in leaf queries.
-12. Keep direct exact enumeration as build/fallback tool, not repeated inner-loop work.
-13. Only then benchmark broader/full 1,326-support restricted games.
+12. Prefer persistent exact table lookup for repeated all-in leaf queries.
+13. Direct exact enumeration remains build/fallback research tool, not repeated inner-loop work.
+14. Never silently fall back to sampled payoff.
+15. Only after C5 benchmark broader/full 1,326-support restricted games.
 
 ## Later phases — do not jump ahead
 
@@ -194,6 +195,6 @@ Before chart promotion:
 4. Read `docs/PAYOFF_POLICY.md`.
 5. Inspect latest commits on `chat-aligned-v2`.
 6. Inspect newest `Rust Solver Core` CI.
-7. Continue from **CURRENT NEXT STEP — C3**.
+7. Continue from **CURRENT NEXT STEP — C4**.
 
-Do not redo completed A/B/C1/C2 work unless evaluator/schema/game assumptions deliberately change.
+Do not redo completed A/B/C1/C2/C3 work unless evaluator/schema/game assumptions deliberately change.
