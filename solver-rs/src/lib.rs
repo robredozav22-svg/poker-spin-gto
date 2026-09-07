@@ -1,6 +1,7 @@
 pub mod blockers;
 pub mod cards;
 pub mod class_aggregation;
+pub mod continuation_registry;
 pub mod equity;
 pub mod equity3;
 pub mod equity3_cache;
