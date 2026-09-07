@@ -5,10 +5,17 @@ use sha2::{Digest,Sha256};
 use crate::cards::{Card,Combo};
 
 #[derive(Debug,Clone,PartialEq,Eq,Hash)]
-pub struct RangeStateId(pub String);
+pub struct RangeStateId(String);
 
 impl RangeStateId{
     pub fn as_str(&self)->&str{&self.0}
+
+    pub fn parse(value:&str)->Result<Self,String>{
+        let hex=value.strip_prefix("sha256:").ok_or_else(||"range_state_id must use sha256: prefix".to_string())?;
+        if hex.len()!=64{return Err("range_state_id sha256 digest must contain exactly 64 hex characters".into());}
+        if !hex.bytes().all(|b|b.is_ascii_digit()||(b'a'..=b'f').contains(&b)){return Err("range_state_id sha256 digest must be lowercase hexadecimal".into());}
+        Ok(Self(value.to_string()))
+    }
 }
 
 pub fn fingerprint_range_state(
@@ -25,14 +32,14 @@ pub fn fingerprint_range_state(
 
     let mut h=Sha256::new();
     h.update(b"SPINS_RANGE_STATE_V1\0");
-    write_len(&mut h,context.as_bytes().len());
+    write_len(&mut h,context.len());
     h.update(context.as_bytes());
     write_len(&mut h,board.len());
     for c in board{h.update([*c]);}
     write_range(&mut h,&a);
     write_range(&mut h,&b);
     let digest=h.finalize();
-    Ok(RangeStateId(format!("sha256:{:x}",digest)))
+    RangeStateId::parse(&format!("sha256:{:x}",digest))
 }
 
 fn validate_board(board:&[Card])->Result<(),String>{
@@ -102,6 +109,13 @@ mod tests{
     fn context_change_changes_fingerprint(){
         let a=vec![([1,2],1.0)];let b=vec![([3,4],1.0)];
         assert_ne!(fingerprint_range_state("edge-a",&[9],&a,&b).unwrap(),fingerprint_range_state("edge-b",&[9],&a,&b).unwrap());
+    }
+
+    #[test]
+    fn malformed_serialized_id_is_rejected(){
+        assert!(RangeStateId::parse("range-v1").is_err());
+        assert!(RangeStateId::parse("sha256:ABC").is_err());
+        assert!(RangeStateId::parse(&format!("sha256:{}","a".repeat(64))).is_ok());
     }
 
     #[test]
