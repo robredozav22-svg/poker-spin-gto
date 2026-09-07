@@ -32,3 +32,6 @@ jobs:
       - name: Run one exact three-way equity enumeration
         working-directory: solver-rs
         run: cargo run --release --bin exact_equity3_smoke
+      - name: Run exact three-way terminal leaf smoke
+        working-directory: solver-rs
+        run: cargo run --release --bin exact_leaf3_smoke
