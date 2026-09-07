@@ -1,0 +1,26 @@
+name: Rust Solver Core
+
+on:
+  pull_request:
+    paths:
+      - 'solver-rs/**'
+      - '.github/workflows/solver-rust-core.yml'
+  push:
+    branches: [chat-aligned-v2]
+    paths:
+      - 'solver-rs/**'
+      - '.github/workflows/solver-rust-core.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Rust core tests
+        working-directory: solver-rs
+        run: cargo test --all --locked
