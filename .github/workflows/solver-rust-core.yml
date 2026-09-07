@@ -59,3 +59,6 @@ jobs:
       - name: Run HU exact generation economics benchmark
         working-directory: solver-rs
         run: cargo run --release --bin hu_generation_economics
+      - name: Run persisted exact leaf equivalence smoke
+        working-directory: solver-rs
+        run: cargo run --release --bin persisted_leaf_smoke
