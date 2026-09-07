@@ -29,3 +29,6 @@ jobs:
       - name: Run exact-payoff restricted convergence benchmark
         working-directory: solver-rs
         run: cargo run --release --bin restricted_exact_bench
+      - name: Run one exact three-way equity enumeration
+        working-directory: solver-rs
+        run: cargo run --release --bin exact_equity3_smoke
