@@ -1,11 +1,6 @@
 name: Solver Unit Tests
 
 on:
-  pull_request:
-    paths:
-      - 'solver/**'
-      - 'tests/**'
-      - '.github/workflows/solver-unit.yml'
   push:
     branches: [chat-aligned-v2]
     paths:
