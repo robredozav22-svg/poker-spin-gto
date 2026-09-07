@@ -36,6 +36,7 @@ pub mod strategy_range;
 pub mod terminal;
 pub mod terminal_ev;
 pub mod tree;
+pub mod tree_catalog;
 pub mod tree_profile;
 
 pub const HAND_CLASSES:usize=169;
