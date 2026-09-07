@@ -1,0 +1,34 @@
+name: UI Router Tests
+
+on:
+  pull_request:
+    paths:
+      - 'ui/**'
+      - 'app.js'
+      - 'index.html'
+      - 'tests/test_ui_router.js'
+      - '.github/workflows/ui-router-tests.yml'
+  push:
+    branches: [chat-aligned-v2]
+    paths:
+      - 'ui/**'
+      - 'app.js'
+      - 'index.html'
+      - 'tests/test_ui_router.js'
+      - '.github/workflows/ui-router-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  router:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run router regression tests
+        run: node tests/test_ui_router.js
