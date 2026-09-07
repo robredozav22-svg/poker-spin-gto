@@ -9,13 +9,7 @@ on:
       - 'tests/**'
       - 'scripts/validate-chart-data.mjs'
       - '.github/workflows/chart-audit.yml'
-  pull_request:
-    paths:
-      - 'data/**'
-      - 'solver/**'
-      - 'tests/**'
-      - 'scripts/validate-chart-data.mjs'
-      - '.github/workflows/chart-audit.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read
