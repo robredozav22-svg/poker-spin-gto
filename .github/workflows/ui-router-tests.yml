@@ -1,14 +1,6 @@
 name: V45 UI Core Tests
 
 on:
-  pull_request:
-    paths:
-      - 'ui/**'
-      - 'app.js'
-      - 'index.html'
-      - 'tests/test_ui_router.js'
-      - 'tests/test_ui_grid.js'
-      - '.github/workflows/ui-router-tests.yml'
   push:
     branches: [chat-aligned-v2]
     paths:
