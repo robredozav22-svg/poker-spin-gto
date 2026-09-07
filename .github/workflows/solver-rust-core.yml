@@ -38,3 +38,6 @@ jobs:
       - name: Run exact heads-up terminal leaf smoke
         working-directory: solver-rs
         run: cargo run --release --bin exact_leaf_hu_smoke
+      - name: Run sampled versus exact equity cross-check
+        working-directory: solver-rs
+        run: cargo run --release --bin exact_sampled_crosscheck
