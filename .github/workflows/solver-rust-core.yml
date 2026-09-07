@@ -44,3 +44,6 @@ jobs:
       - name: Run analytical matrix-game convergence benchmark
         working-directory: solver-rs
         run: cargo run --release --bin synthetic_matrix_bench
+      - name: Run canonical payoff census benchmark
+        working-directory: solver-rs
+        run: cargo run --release --bin canonical_payoff_census
