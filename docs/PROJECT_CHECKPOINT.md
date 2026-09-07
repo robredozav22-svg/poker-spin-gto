@@ -1,10 +1,10 @@
 # Poker Spin GTO — Live Project Recovery Index
 
-Last updated: 2026-09-07 15:05 +05
+Last updated: 2026-09-07 16:20 +05
 Active branch: `chat-aligned-v2`
 Status: `RESEARCH_ONLY`
 Main policy: DO NOT modify `main` until validation gates pass and the user explicitly approves promotion.
-Latest confirmed Rust CI: run `34109465365`, head `e9b0f94f59f4d466225e7f3fe7d22a0f57f4b1a4`, SUCCESS.
+Latest fully confirmed broad-scaling CI: run `34115851744`, head `9c0cf847e57a2714a97682c152e760d6002e66db`, SUCCESS.
 
 This is the FIRST file to read in a new chat. Detailed immutable milestones live under `docs/checkpoints/`.
 
@@ -32,7 +32,7 @@ Verification states:
 
 Original app charts remain `INVALID_FOR_STRATEGY`. Read `docs/CHART_AUDIT.md` + `data/chart-manifest.json` before chart work.
 
-## Completed solver phases
+## Completed foundation
 
 ### Phase A — exact all-in foundation: COMPLETE / RESEARCH_ONLY
 Checkpoint: `docs/checkpoints/2026-09-07-exact-allin-phase-a.md`.
@@ -42,100 +42,118 @@ Checkpoint: `docs/checkpoints/2026-09-07-synthetic-matrix-phase-b.md`.
 
 ### Phase C — exact all-in payoff persistence/runtime: COMPLETE / RESEARCH_ONLY
 
-Base checkpoint: `docs/checkpoints/2026-09-07-payoff-precompute-phase-c.md`.
-Additional checkpoints:
+Key checkpoints:
+- `docs/checkpoints/2026-09-07-payoff-precompute-phase-c.md`
 - `docs/checkpoints/2026-09-07-payoff-integrity-c3.md`
 - `docs/checkpoints/2026-09-07-hu-generation-economics-c4.md`
 - `docs/checkpoints/2026-09-07-persisted-leaf-integration-c5.md`
 
-Full HU canonical census:
-- legal ordered HU pairs: 1,624,350;
-- unique canonical HU keys: 93,769;
-- dedup: 17.322889x.
-
-Bounded 3-way sample only:
-- 4 hero combos;
-- 5,527,200 legal triples;
-- 654,284 unique sample keys;
-- observed dedup 8.447708x.
-
-NEVER quote 654,284 as the full 3-way universe.
-
-### C1 persisted lookup — complete
-- versioned integer-outcome table;
-- duplicate/non-canonical records rejected;
-- missing key explicit `None`;
-- no sampled fallback.
-
-### C2 compute-missing build — complete
-- only missing canonical keys computed;
-- trusted records reused;
-- canonical sorted deterministic output;
-- no in-place trusted-table mutation.
-
-### C3 integrity manifest — complete
-- `SPNMAN01` sidecar;
-- schema/kind/count/length/FNV/provenance/timestamp;
-- corruption rejected;
-- FNV is corruption detection only, not authentication.
-
-### C4 generation economics — complete
-8-key deterministic exact HU batch:
-- serial: 4.477354 keys/sec, projected full HU ~5.82h;
-- 2 workers: 8.972857 keys/sec, projected ~2.90h;
-- 4 workers: 9.690138 keys/sec, projected ~2.69h;
-- projections are batch-derived estimates, not measured full builds.
-
-### C5 table-backed runtime leaf integration — complete
-
-Implemented:
-- `solver-rs/src/persisted_range_equity.rs`
-- HU `persisted_bb_leaf_action_values(...)`
-- 3-way `persisted_bb_after_btn_jam_sb_call_values(...)`
-- `solver-rs/src/bin/persisted_leaf_smoke.rs`
-
-Confirmed direct exact == persisted exact on fixtures:
-
-HU BB=KK vs AA jammer, 8bb:
-- equity 0.187445103;
-- Fold EV -1.000000000;
-- Call EV -5.000878349.
-
-3-way BB=QQ / BTN=AA / SB=KK, 8bb:
-- equities BB/BTN/SB = 0.146191074 / 0.665054415 / 0.188754510;
-- Fold EV -1.000000000;
-- Call EV -4.491414214.
-
-Strict runtime behavior:
-- missing HU payoff = REJECT;
-- missing 3-way payoff = REJECT;
+Confirmed infrastructure:
+- full HU canonical census: 1,624,350 legal ordered pairs -> 93,769 canonical keys;
+- exact integer-outcome payoff tables;
+- read-only fail-closed lookup;
+- compute-missing build path;
+- deterministic sorted byte-identical output;
+- integrity manifest;
+- persisted HU and genuine 3-way terminal leaves;
+- missing exact payoff = REJECT;
 - sampled fallback = NONE.
 
-Latest gate:
-- run `34109465365` = SUCCESS;
-- 93/93 Rust library tests pass;
-- all Phase A/B/C gates remain green.
+## Broader-support scaling — confirmed
 
-## CURRENT NEXT STEP — bounded broader-support exact solve
+### 6x6 physical-combo fixture
+Checkpoint: `docs/checkpoints/2026-09-07-broad-6x6-scaling.md`.
 
-Do NOT jump to full 1,326 x 1,326 support.
+Confirmed:
+- legal pairs: 34;
+- unique canonical payoffs: 34;
+- artifact: 984 bytes;
+- payoff build ~6.55-7.71 sec across runner passes;
+- 10,000 solver sweeps ~0.45-0.52 sec;
+- NashConv: 0.001363022bb;
+- exact enumeration during solve: ZERO;
+- deterministic repeated solve: PASS.
 
-1. Inspect current `restricted_exact.rs` and separate payoff preparation from repeated solver sweeps where needed.
-2. Create deterministic broader SB/BB supports in bounded stages (for example 6x6, then 12x12 only if economics fit CI).
-3. Enumerate the set of legal ordered private-hand pairs and unique canonical HU payoff keys needed by each restricted support.
-4. Build those exact payoff records once, preferably controlled parallel build outside the repeated regret sweeps.
-5. Reuse the in-memory/table-backed payoff matrix across many sweeps.
-6. Measure separately:
-   - payoff build wall time;
-   - unique canonical key count;
-   - encoded artifact size;
-   - solver-only sweep time after payoffs exist;
-   - NashConv progression;
-   - strategy stability / max delta / weighted MAE.
-7. Require deterministic repeated solve results from the same payoff table.
-8. Compare the original 3x3 restricted benchmark with broader supports without treating either as full Spin GTO.
-9. Keep CI bounded. If 12x12 payoff generation is too costly, stop at the largest measured safe stage and record the limitation.
-10. Only after this scaling stage should Phase D expand the preflop action tree.
+### 12x12 physical-combo fixture
+Checkpoint: `docs/checkpoints/2026-09-07-broad-12x12-scaling.md`.
+
+Confirmed on run `34115851744`:
+- legal pairs: 128;
+- unique canonical payoffs: 128;
+- artifact: 3,616 bytes;
+- exact payoff build: 25.306890 sec;
+- lookup construction: 0.003664 sec;
+- 10,000 solver sweeps: 0.486148 sec;
+- repeat solve: 0.499246 sec;
+- solver throughput: 20,569.871 sweeps/sec;
+- NashConv: 0.000117792bb;
+- exact enumeration during solve: ZERO;
+- deterministic repeat: PASS.
+
+Interpretation:
+- one-time exact payoff generation is clearly the bottleneck;
+- regret solving itself remains cheap after payoffs exist;
+- 12x12 remains only a bounded research fixture, not chart data.
+
+## Parallel exact-payoff builder — CURRENT GATE
+
+Implemented in `solver-rs/src/payoff_build.rs`:
+- `build_hu_payoff_table_parallel(...)`;
+- explicit bounded worker count;
+- only missing requested keys dispatched;
+- existing trusted records reused;
+- worker completion order discarded;
+- final records canonical-key sorted;
+- intended byte-identical output versus serial builder;
+- workers=0 rejected;
+- non-canonical and duplicate keys rejected.
+
+Smoke prepared:
+`solver-rs/src/bin/payoff_parallel_build_smoke.rs`.
+
+It requires serial and 2-worker parallel exact computation of two canonical keys to have:
+- identical integer outcomes;
+- identical canonical records;
+- byte-identical encoded payload.
+
+Current CI to inspect first:
+- run `34116339869` on head `c7dde30f32ee3c54391e3ca7e2393728acae26c6`.
+- It compiles the prepared 24x24 benchmark and executes the parallel-build equivalence smoke.
+- Do NOT enable 24x24 execution until this run is SUCCESS.
+
+## Prepared but NOT YET EXECUTED — 24x24
+
+File:
+`solver-rs/src/bin/restricted_persisted_24x24_bench.rs`.
+
+Design:
+- SB support: 24 physical combos;
+- BB support: 24 physical combos;
+- 2-worker parallel exact payoff build;
+- persisted lookup only during solve;
+- two independent 10,000-sweep solves;
+- exact integer payoff table reused;
+- repeated strategies/reports must be identical;
+- exact enumeration during solve must remain ZERO.
+
+This benchmark is intentionally not yet wired into workflow.
+
+## CURRENT NEXT STEP
+
+1. Check run `34116339869`.
+2. If parallel-build equivalence smoke is green, add `restricted_persisted_24x24_bench` to `.github/workflows/solver-rust-core.yml`.
+3. Run 24x24 and measure:
+   - legal pairs;
+   - unique canonical payoff keys;
+   - artifact bytes;
+   - parallel payoff build time / keys per second;
+   - lookup construction time;
+   - solver-only time;
+   - NashConv;
+   - deterministic repeat.
+4. Save an immutable 24x24 checkpoint if green.
+5. Do NOT jump directly to full 1,326 x 1,326.
+6. After 24x24, decide whether the next best step is 48x48 scaling or Phase D tree expansion based on measured payoff-build economics and mathematical value.
 
 ## Later phases
 
@@ -145,7 +163,7 @@ Phase E: non-all-in branches need measured postflop continuation EV; showdown eq
 
 Phase F: solve fully specified nodes, audit 1326->169 suit dispersion, validate externally, then consider `VERIFIED_EXACT` chart candidates.
 
-Phase G: UI adaptation after strategy/data model is trustworthy.
+Phase G: UI adaptation only after strategy/data model is trustworthy. The user explicitly does NOT want a raw iPhone build.
 
 ## Promotion gates
 
@@ -168,6 +186,6 @@ Before chart promotion:
 4. Read `docs/PAYOFF_POLICY.md`.
 5. Inspect latest commits on `chat-aligned-v2`.
 6. Inspect newest `Rust Solver Core` CI.
-7. Continue from **CURRENT NEXT STEP — bounded broader-support exact solve**.
+7. Continue from **CURRENT NEXT STEP**.
 
-Do not redo completed A/B/C work unless evaluator/schema/game assumptions deliberately change.
+Do not redo completed A/B/C/6x6/12x12 work unless evaluator/schema/game assumptions deliberately change.
