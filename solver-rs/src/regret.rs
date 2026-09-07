@@ -20,6 +20,9 @@ impl RegretTable {
         }
     }
 
+    pub fn infosets(&self) -> usize { self.infosets }
+    pub fn actions(&self) -> usize { self.actions }
+
     pub fn current_strategy(&self, infoset: usize) -> Vec<f64> {
         let start = infoset * self.actions;
         let row = &self.regrets[start..start + self.actions];
@@ -28,6 +31,14 @@ impl RegretTable {
             return vec![1.0 / self.actions as f64; self.actions];
         }
         row.iter().map(|r| r.max(0.0) / positive_sum).collect()
+    }
+
+    pub fn current_strategy_snapshot(&self) -> StrategySnapshot {
+        let mut probabilities=Vec::with_capacity(self.infosets*self.actions);
+        for infoset in 0..self.infosets {
+            probabilities.extend(self.current_strategy(infoset));
+        }
+        StrategySnapshot{infosets:self.infosets,actions:self.actions,probabilities}
     }
 
     pub fn add_regret_row(&mut self, infoset: usize, delta: &[f64]) {
@@ -130,6 +141,18 @@ mod tests {
     fn zero_regrets_are_uniform() {
         let table = RegretTable::new(2, 3);
         assert_eq!(table.current_strategy(0), vec![1.0 / 3.0; 3]);
+        assert_eq!(table.infosets(),2);
+        assert_eq!(table.actions(),3);
+    }
+
+    #[test]
+    fn current_snapshot_matches_current_rows() {
+        let mut table=RegretTable::new(2,2);
+        table.add_regret_row(0,&[3.0,1.0]);
+        table.add_regret_row(1,&[0.0,2.0]);
+        let s=table.current_strategy_snapshot();
+        assert_eq!(s.row(0),&[0.75,0.25]);
+        assert_eq!(s.row(1),&[0.0,1.0]);
     }
 
     #[test]
