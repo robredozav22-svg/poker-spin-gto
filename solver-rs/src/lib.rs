@@ -5,6 +5,7 @@ pub mod equity_cache;
 pub mod evaluator;
 pub mod joint;
 pub mod range;
+pub mod range_equity;
 pub mod regret;
 pub mod terminal;
 pub mod terminal_ev;
