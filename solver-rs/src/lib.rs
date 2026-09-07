@@ -1,4 +1,5 @@
 pub mod regret;
+pub mod tree;
 
 pub const HAND_CLASSES: usize = 169;
 
