@@ -12,6 +12,7 @@ pub mod range;
 pub mod range_equity;
 pub mod range_equity3;
 pub mod regret;
+pub mod sb_ev;
 pub mod strategy_range;
 pub mod terminal;
 pub mod terminal_ev;
