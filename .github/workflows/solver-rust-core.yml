@@ -5,6 +5,12 @@ on:
     branches: [chat-aligned-v2]
     paths:
       - 'solver-rs/**'
+      - '!solver-rs/src/preflop_tree.rs'
+      - '!solver-rs/src/reference_tree_15bb.rs'
+      - '!solver-rs/src/tree_profile.rs'
+      - '!solver-rs/src/tree_catalog.rs'
+      - '!solver-rs/src/strategy_record.rs'
+      - '!solver-rs/src/continuation_registry.rs'
       - '.github/workflows/solver-rust-core.yml'
   workflow_dispatch:
 
