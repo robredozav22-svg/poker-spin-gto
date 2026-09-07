@@ -16,6 +16,7 @@ pub mod joint;
 pub mod leaf_cfr;
 pub mod leaf_ev;
 pub mod matrix_game;
+pub mod payoff_table;
 pub mod range;
 pub mod range_equity;
 pub mod range_equity3;
@@ -32,21 +33,21 @@ pub mod tree;
 
 pub const HAND_CLASSES: usize = 169;
 
-#[derive(Debug, Clone, Copy,PartialEq,Eq)]
-pub enum SolverStatus {
+#[derive(Debug,Clone,Copy,PartialEq,Eq)]
+pub enum SolverStatus{
     ResearchOnly,
     StableApprox,
     Promoted,
 }
 
 #[derive(Debug,Clone,PartialEq)]
-pub struct StrategySnapshot {
+pub struct StrategySnapshot{
     pub infosets:usize,
     pub actions:usize,
     pub probabilities:Vec<f64>,
 }
 
-impl StrategySnapshot {
+impl StrategySnapshot{
     pub fn row(&self,infoset:usize)->&[f64]{
         let start=infoset*self.actions;
         &self.probabilities[start..start+self.actions]
