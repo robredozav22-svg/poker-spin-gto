@@ -23,14 +23,7 @@ pub enum PayoutProfile{
 }
 
 #[derive(Debug,Clone,Copy,PartialEq,Eq,Hash,PartialOrd,Ord)]
-pub enum PreflopAction{
-    Fold,
-    Check,
-    LimpTo(Bb100),
-    CallTo(Bb100),
-    RaiseTo(Bb100),
-    JamTo(Bb100),
-}
+pub enum PreflopAction{Fold,Check,LimpTo(Bb100),CallTo(Bb100),RaiseTo(Bb100),JamTo(Bb100)}
 
 impl PreflopAction{
     pub fn amount_to(self)->Option<Bb100>{
@@ -44,9 +37,9 @@ impl PreflopAction{
 #[derive(Debug,Clone,Copy,PartialEq,Eq,Hash)]
 pub struct HistoryEvent{pub actor:Player,pub action:PreflopAction}
 
-/// Exact strategy identity must include the solution/tree profile. The same
-/// stack/history can have different legal sizes in Wizard General, Research,
-/// Simple, fixed-size or custom trees and therefore cannot share one node key.
+/// Exact strategy identity includes solution/tree profile. The same stack and
+/// history can have different legal sizes in General/Research/Simple/custom
+/// trees and therefore cannot share one strategy key.
 #[derive(Debug,Clone,PartialEq,Eq,Hash)]
 pub struct PreflopNodeKey{
     pub format:GameFormat,
@@ -58,14 +51,7 @@ pub struct PreflopNodeKey{
 }
 
 impl PreflopNodeKey{
-    pub fn new(
-        format:GameFormat,
-        payout:PayoutProfile,
-        tree_profile_id:impl Into<String>,
-        effective_stack:Bb100,
-        actor:Player,
-        history:Vec<HistoryEvent>,
-    )->Result<Self,String>{
+    pub fn new(format:GameFormat,payout:PayoutProfile,tree_profile_id:impl Into<String>,effective_stack:Bb100,actor:Player,history:Vec<HistoryEvent>)->Result<Self,String>{
         if effective_stack.0==0{return Err("effective stack must be positive".into());}
         let tree_profile_id=tree_profile_id.into();
         if tree_profile_id.trim().is_empty(){return Err("tree_profile_id must not be empty".into());}
@@ -88,7 +74,6 @@ impl TreeEvidence{
     }
 }
 
-/// Contract for the mathematical object required after an action.
 #[derive(Debug,Clone,Copy,PartialEq,Eq,Hash)]
 pub enum ContinuationContract{ChildDecision,ExactFoldSettlement,ExactAllInShowdown,RequiresPostflopEv,Unresolved}
 
@@ -136,7 +121,6 @@ fn validate_continuation_contract(edge:&ActionEdge,stack:Bb100)->Result<(),Strin
         (PreflopAction::CallTo(_),ContinuationContract::RequiresPostflopEv|ContinuationContract::ChildDecision|ContinuationContract::Unresolved)=>Ok(()),
         (PreflopAction::RaiseTo(amount),ContinuationContract::ExactAllInShowdown) if amount<stack=>Err("non-all-in raise cannot be marked ExactAllInShowdown".into()),
         (PreflopAction::LimpTo(_)|PreflopAction::RaiseTo(_)|PreflopAction::Check,ContinuationContract::RequiresPostflopEv|ContinuationContract::ChildDecision|ContinuationContract::Unresolved)=>Ok(()),
-        (_,ContinuationContract::Unresolved)=>Ok(()),
         (_,ContinuationContract::ExactFoldSettlement)=>Err("non-fold action cannot use ExactFoldSettlement".into()),
         (_,ContinuationContract::ExactAllInShowdown)=>Err("action is not proven to complete an all-in showdown".into()),
     }
