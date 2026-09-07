@@ -1,31 +1,28 @@
 # Poker Spin GTO — Live Project Recovery Index
 
-Last updated: 2026-09-07 14:05 +05
+Last updated: 2026-09-07 14:50 +05
 Active branch: `chat-aligned-v2`
 Status: `RESEARCH_ONLY`
 Main policy: DO NOT modify `main` until validation gates pass and the user explicitly approves promotion.
-Latest confirmed Rust CI: run `34103912694`, head `1153993b9d5bb1181e7af8713a74abecf8668473`, SUCCESS.
+Latest confirmed Rust CI: run `34108126766`, head `f731a192c7cb2fb02a9340a80e3ec50916d078fe`, SUCCESS.
 
-This is the FIRST file to read in a new chat. It intentionally stays concise. Detailed, immutable mathematical milestones live under `docs/checkpoints/`.
+This is the FIRST file to read in a new chat. Detailed immutable milestones live under `docs/checkpoints/`.
 
-## Current project objective
+## Product / strategy invariants
 
-Build a trustworthy off-the-table 3-max Spin & Go preflop study/review app for GGPokerOK-style play.
+Target: trustworthy off-the-table 3-max Spin & Go preflop study/review app for GGPokerOK-style play.
 
-Hard UX rules retained:
-- effective stack is the primary stack control;
-- fast one-screen workflow;
-- minimal clicks / large controls;
+Keep:
+- effective stack as primary stack control;
+- one-screen/minimal-click UX;
 - preflop current scope;
 - no live-RTA framing;
-- strategy correctness and branch completeness come before UI polish.
-
-Hard strategy rules retained:
-- never invent frequencies/EV/ranges;
-- never interpolate missing stacks and call them solved;
-- preserve action history, positions and sizes;
-- keep GTO/WTA, simplified, exploit and multi-place ICM layers separate;
-- unsupported/missing nodes fail closed.
+- strategy correctness before UI polish;
+- no invented frequencies/EV/ranges;
+- no interpolation of missing stacks as solved data;
+- exact action-history/position/sizing context;
+- separate GTO/WTA, simplified, exploit and multi-place ICM layers;
+- missing/unsupported nodes fail closed.
 
 Canonical future strategy key:
 `format -> payout_profile -> effective_stack -> hero_position -> previous_actions -> villain_position -> villain_size -> hero_actions -> hand -> frequencies`
@@ -33,182 +30,170 @@ Canonical future strategy key:
 Verification states:
 `VERIFIED_EXACT`, `CROSS_CHECKED`, `PARTIAL`, `MISSING_EXACT`, `INVALID_FOR_STRATEGY`.
 
-## Existing chart status
+Original app charts remain `INVALID_FOR_STRATEGY`. Read `docs/CHART_AUDIT.md` + `data/chart-manifest.json` before chart work.
 
-The original app chart data remains `INVALID_FOR_STRATEGY` and must not be revived.
-
-Read:
-- `docs/CHART_AUDIT.md`
-- `data/chart-manifest.json`
-
-External sources such as GTO Wizard / PokerStars / public solved charts are independent holdout/reference evidence, not training labels for the self-built solver.
-
-## Completed solver phases
+## Completed phases
 
 ### Phase A — exact all-in payoff foundation: COMPLETE / RESEARCH_ONLY
 
-Read immutable checkpoint:
+Checkpoint:
 `docs/checkpoints/2026-09-07-exact-allin-phase-a.md`
 
-Key confirmed facts:
-- exact HU enumerates C(48,5)=1,712,304 boards;
+Confirmed:
+- exact HU C(48,5)=1,712,304 boards;
 - AA vs KK = 0.812554897 / 0.187445103;
-- exact 3-way enumerates C(46,5)=1,370,754 boards;
+- exact 3-way C(46,5)=1,370,754 boards;
 - AA / KK / QQ = 0.665054415 / 0.188754510 / 0.146191074;
-- exact HU and exact 3-way all-in payoff operators are canonical research paths;
-- sampled all-in equity remains cross-check/research only;
-- sampled-vs-exact 200k-board audit passed with <0.001 max absolute equity error on the fixtures;
-- exact restricted `BTN fold -> SB Fold/Jam -> BB Fold/Call` game reached NashConv 0.001778596bb at 10,000 sweeps.
+- exact HU/3-way all-in payoff is canonical research path;
+- sampled equity is cross-check/research only;
+- exact restricted game NashConv = 0.001778596bb at 10k sweeps.
 
-Policy:
-`docs/PAYOFF_POLICY.md`
+Policy: `docs/PAYOFF_POLICY.md`.
 
-### Phase B — synthetic generic solver validation: COMPLETE / RESEARCH_ONLY
+### Phase B — generic solver validation: COMPLETE / RESEARCH_ONLY
 
-Read immutable checkpoint:
+Checkpoint:
 `docs/checkpoints/2026-09-07-synthetic-matrix-phase-b.md`
 
-Confirmed independently of poker evaluation:
-- Matching Pennies equilibrium exactly 50/50, value 0, NashConv 0;
-- asymmetric matrix `[[4,0],[-1,2]]` converges near analytical equilibrium Row 3/7, Column 2/7, value 8/7;
-- at 100k iterations: row error 0.001839403, column error 0.001375967, value error 0.000017717, NashConv 0.007806707.
+Confirmed:
+- Matching Pennies exact 50/50, value 0, NashConv 0;
+- asymmetric `[[4,0],[-1,2]]` converges near analytical Row 3/7, Column 2/7, value 8/7;
+- at 100k: row error 0.001839403, column error 0.001375967, value error 0.000017717, NashConv 0.007806707.
 
-Conclusion: generic `RegretTable`, frozen simultaneous action-value updates and averaging work on known zero-sum games, not only on poker payoffs.
+### Phase C — exact payoff precompute / persistence: ACTIVE
 
-### Phase C — exact payoff precompute/scaling: ACTIVE
-
-Read current immutable checkpoint:
+Checkpoint:
 `docs/checkpoints/2026-09-07-payoff-precompute-phase-c.md`
 
-Confirmed full HU canonical census:
-- ordered legal HU pairs: 1,624,350;
-- unique suit-canonical HU keys: 93,769;
-- dedup factor: 17.322889x;
-- census key generation ~0.458 sec.
+Full HU canonical census:
+- legal ordered HU pairs: 1,624,350;
+- unique canonical HU keys: 93,769;
+- dedup: 17.322889x.
 
-Bounded 3-way sample only — NOT full census:
-- 4 fixed hero combos;
-- 5,527,200 legal ordered triples;
-- 654,284 unique keys inside that sample;
-- observed dedup 8.447708x;
-- ~1.753 sec key generation.
+Bounded 3-way sample only:
+- 4 hero combos;
+- 5,527,200 legal triples;
+- 654,284 unique sample keys;
+- observed dedup 8.447708x.
 
-Never quote 654,284 as the full 3-way key universe.
+NEVER quote 654,284 as the full 3-way universe.
 
-## Persistent payoff-table foundation
+## C1 — persistent lookup: COMPLETE / CI CONFIRMED
 
 Implemented:
-`solver-rs/src/payoff_table.rs`
+- `solver-rs/src/payoff_table.rs`
+- `solver-rs/src/payoff_lookup.rs`
 
 Format v1:
 - magic `SPNPAY01`;
-- table schema version;
-- evaluator schema version;
+- table/evaluator schema versions;
 - HU/3-way kind;
 - exact board-count provenance;
-- record count;
-- exact canonical key;
+- canonical key;
 - exact integer outcome counts.
 
-No external Rust dependency added.
+Lookup policy:
+- duplicate canonical keys = reject;
+- non-canonical stored keys = reject;
+- missing key = explicit `None`;
+- NEVER substitute sampled equity silently.
 
-Decoder fails closed on wrong magic/version/schema/kind/board count/length/outcome totals.
+CI persisted lookup fixture:
+- HU AA/KK reload = 0.812554897;
+- 3-way AA/KK/QQ reload = 0.665054415 / 0.188754510 / 0.146191074;
+- integer outcomes match direct exact enumeration;
+- 3-way reconstructed floating equity uses 1e-12 tolerance because direct enumeration accumulates `1/3` tie shares iteratively while persistence reconstructs from exact integer tie counts. Integer counts are source of truth.
 
-HU and 3-way round-trip tests preserve exact integer outcomes; equity is reconstructed from counts rather than stored rounded floats.
+## C2 — build-only compute-missing generator: COMPLETE / CI CONFIRMED
 
-## Latest CI gate
+Implemented:
+- `solver-rs/src/payoff_build.rs`
+- `solver-rs/src/bin/payoff_build_smoke.rs`
 
-Rust workflow:
-`.github/workflows/solver-rust-core.yml`
+Rules:
+- runtime lookup remains read-only;
+- input = requested canonical keys + optional existing trusted table;
+- non-canonical keys rejected;
+- duplicate existing keys rejected;
+- existing requested keys reused;
+- only missing exact keys computed;
+- output records canonically sorted;
+- generator returns a NEW table; no trusted artifact mutation in place;
+- same exact data produces byte-identical encoded table.
 
-Latest confirmed run: `34103912694` = SUCCESS.
+CI smoke:
+- first HU build computed 1;
+- incremental HU build reused 1, computed 1 new key;
+- idempotent HU rebuild computed 0 and produced byte-identical output;
+- first 3-way build computed 1;
+- repeated 3-way build reused 1, recomputed 0;
+- 89/89 Rust library tests passed.
 
-The gate includes:
-- all Rust unit tests, including payoff-table roundtrip/corruption tests;
-- sampled sparse convergence benchmark;
-- exact HU equity smoke;
-- exact restricted NashConv benchmark;
-- exact 3-way equity smoke;
-- exact 3-way terminal leaf smoke;
-- exact HU terminal leaf smoke;
-- sampled-vs-exact audit;
-- synthetic analytical matrix benchmark;
-- canonical payoff census benchmark.
+Latest full gate: run `34108126766` = SUCCESS.
 
-A documentation-only commit may be newer than this CI head; check whether any newer `solver-rs/**` commit exists before assuming the run covers the current solver code.
+## CURRENT NEXT STEP — C3 provenance / integrity
 
-## CURRENT NEXT STEP — continue here
+Continue here:
 
-### C1 — indexed persistent lookup layer
+1. Add deterministic artifact integrity checksum/hash over encoded payoff payload.
+2. Keep checksum purpose explicit: corruption/integrity detection, not authentication unless cryptographic hashing is used.
+3. Add sidecar/versioned manifest containing at minimum:
+   - table schema version;
+   - evaluator schema version;
+   - HU/3-way kind;
+   - exact record count;
+   - payload byte length;
+   - payload checksum/hash;
+   - generation provenance / solver-core revision supplied by build caller;
+   - generation timestamp supplied externally, not used in deterministic payload bytes.
+4. Add manifest verification that fails closed on payload mismatch.
+5. Preserve canonical sorted ordering for reproducible payload bytes.
+6. Do not add network or runtime mutation to solver lookup.
 
-1. Build indexed in-memory HU and 3-way lookup objects from decoded payoff tables.
-2. Require canonical-key uniqueness; duplicates must fail closed for deterministic provenance.
-3. Add exact accessors returning reconstructed exact equity/outcome data.
-4. Add fixture tests proving persisted AA/KK and AA/KK/QQ records reproduce direct exact evaluator results.
-5. Add table-query miss behavior explicitly: lookup returns missing, never substitutes sampled equity silently.
+### After C3 — C4 generation economics
 
-### C2 — build-only compute-missing generator
+7. Benchmark exact HU batch generation with controlled parallelism.
+8. Measure throughput on a representative key batch.
+9. Estimate full 93,769-key HU generation time from measured batch throughput.
+10. Derive 3-way required keys from concrete target branches/supports before any large generation.
 
-6. Separate runtime lookup from artifact generation.
-7. Generator input = requested canonical keys + optional existing trusted table.
-8. Compute only missing exact keys.
-9. Sort records canonically for deterministic byte output.
-10. Write a NEW artifact; never mutate a trusted table silently in place.
+### After C4 — C5 solver integration
 
-### C3 — provenance/integrity
-
-11. Add deterministic payload checksum/hash or sidecar manifest.
-12. Record table/evaluator schema, solver-core revision/provenance, record count and generation metadata.
-13. Require stable sorted ordering and reject conflicting duplicate keys.
-
-### C4 — generation economics
-
-14. Benchmark exact HU batch generation under controlled parallelism.
-15. Estimate full 93,769-key HU generation from measured batch throughput, not only one-matchup smoke timing.
-16. For 3-way, derive exact required key sets from concrete target branches/supports before large generation.
-
-### C5 — solver integration
-
-17. Prefer persistent exact table lookups for repeated all-in leaf queries.
-18. Direct exact enumeration stays a correct fallback/build tool, not an inner-loop repeated operation.
-19. Only after C1-C5 are green benchmark broad/full 1,326-support restricted games.
+11. Prefer persistent exact table lookup in repeated all-in leaf queries.
+12. Keep direct exact enumeration as build/fallback tool, not repeated inner-loop work.
+13. Only then benchmark broader/full 1,326-support restricted games.
 
 ## Later phases — do not jump ahead
 
-Phase D: expand exact preflop action tree branch-by-branch with full context.
+Phase D: expand preflop action tree branch-by-branch with exact context.
 
-Phase E: non-all-in leaves require measured postflop continuation EV; exact showdown equity is NOT a substitute.
+Phase E: non-all-in branches need measured postflop continuation EV; showdown equity is NOT a substitute.
 
-Phase F: solve fully specified nodes, audit 1326->169 suit dispersion, validate externally, then consider `VERIFIED_EXACT` candidates.
+Phase F: solve fully specified nodes, audit 1326->169 suit dispersion, validate externally, then consider `VERIFIED_EXACT` chart candidates.
 
-Phase G: UI adaptation after strategy/data model is trustworthy; effective stack remains primary control.
+Phase G: UI adaptation after strategy/data model is trustworthy.
 
-## Promotion gates remain mandatory
+## Promotion gates
 
-No chart becomes production merely because code/CI is green.
+No chart becomes production because CI is green.
 
 Before chart promotion:
-- exact tree and sizing assumptions documented;
-- payout profile documented;
+- tree/sizing/payout assumptions documented;
 - convergence / best-response evidence measured;
-- exact/stable payoff provenance established;
-- 1326->169 suit-variant dispersion audited;
+- exact payoff provenance established;
+- 1326->169 suit dispersion audited;
 - independent external holdout comparison performed;
 - no missing branch substituted;
 - user explicitly approves promotion to `main`.
 
-## Recovery protocol for a fresh chat
+## Fresh-chat recovery protocol
 
 1. Read THIS file.
-2. Read the newest files in `docs/checkpoints/`, especially:
-   - `2026-09-07-exact-allin-phase-a.md`
-   - `2026-09-07-synthetic-matrix-phase-b.md`
-   - `2026-09-07-payoff-precompute-phase-c.md`
+2. Read newest `docs/checkpoints/` files.
 3. Read `docs/SOLVER_EXPERIMENT_STATUS.md`.
 4. Read `docs/PAYOFF_POLICY.md`.
-5. Read `docs/CHART_AUDIT.md` + `data/chart-manifest.json` if chart/tree work is relevant.
-6. Inspect latest commits on `chat-aligned-v2`.
-7. Inspect newest `Rust Solver Core` CI.
-8. Continue from **CURRENT NEXT STEP**, not from old chat text.
+5. Inspect latest commits on `chat-aligned-v2`.
+6. Inspect newest `Rust Solver Core` CI.
+7. Continue from **CURRENT NEXT STEP — C3**.
 
-Do not redo completed Phase A/B work or the HU census unless evaluator/schema/game assumptions changed and deliberate revalidation is required.
+Do not redo completed A/B/C1/C2 work unless evaluator/schema/game assumptions deliberately change.
