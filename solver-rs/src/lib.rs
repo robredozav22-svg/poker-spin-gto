@@ -33,6 +33,7 @@ pub mod restricted_exact;
 pub mod restricted_subgame;
 pub mod sb_ev;
 pub mod solver_evidence;
+pub mod strategy_compare;
 pub mod strategy_metrics;
 pub mod strategy_range;
 pub mod strategy_record;
