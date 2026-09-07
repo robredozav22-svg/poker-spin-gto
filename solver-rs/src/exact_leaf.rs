@@ -3,6 +3,8 @@ use crate::cards::COMBO_COUNT;
 use crate::exact_equity::ExactEquityCache;
 use crate::exact_range_equity::{exact_equity_vs_range,ExactRangeEquity};
 use crate::leaf_ev::{BbHuLeaf,BestLeafAction};
+use crate::payoff_lookup::HuPayoffLookup;
+use crate::persisted_range_equity::persisted_equity_vs_range;
 use crate::range::ComboRange;
 use crate::terminal::{Seat,TerminalId,TerminalPot};
 use crate::terminal_ev::expected_two_active_payoff;
@@ -39,9 +41,25 @@ fn terminals(leaf:BbHuLeaf)->(TerminalId,TerminalId,Seat){
     }
 }
 
-/// Canonical exact HU BB decision for supported all-in leaves.
-/// Opponent range is conditioned on the exact BB cards and every legal board
-/// is enumerated through ExactEquityCache.
+fn settle_leaf(
+    leaf:BbHuLeaf,
+    stack_bb:f64,
+    equity:ExactRangeEquity,
+)->ExactHuLeafActionValues{
+    let (fold_id,call_id,jammer)=terminals(leaf);
+    let fold_pot=TerminalPot::for_terminal(fold_id,stack_bb);
+    let fold_ev=fold_pot.settle(&[jammer])[Seat::Bb as usize];
+    let call_pot=TerminalPot::for_terminal(call_id,stack_bb);
+    let payoff=expected_two_active_payoff(&call_pot,Seat::Bb,jammer,equity.hero_equity);
+    ExactHuLeafActionValues{
+        fold_ev_bb:fold_ev,
+        call_ev_bb:payoff[Seat::Bb as usize],
+        call_equity:equity,
+    }
+}
+
+/// Build/research exact HU path. Every required legal board is enumerated on
+/// cache miss through ExactEquityCache.
 pub fn exact_bb_leaf_action_values(
     leaf:BbHuLeaf,
     stack_bb:f64,
@@ -51,15 +69,22 @@ pub fn exact_bb_leaf_action_values(
     cache:&mut ExactEquityCache,
 )->Result<ExactHuLeafActionValues,String>{
     if bb_combo_index>=COMBO_COUNT{return Err("BB combo index out of range".into());}
-    let (fold_id,call_id,jammer)=terminals(leaf);
-    let fold_pot=TerminalPot::for_terminal(fold_id,stack_bb);
-    let fold_ev=fold_pot.settle(&[jammer])[Seat::Bb as usize];
     let equity=exact_equity_vs_range(bb_combo_index,jammer_range,blockers,cache)?;
-    let call_pot=TerminalPot::for_terminal(call_id,stack_bb);
-    let payoff=expected_two_active_payoff(&call_pot,Seat::Bb,jammer,equity.hero_equity);
-    Ok(ExactHuLeafActionValues{
-        fold_ev_bb:fold_ev,
-        call_ev_bb:payoff[Seat::Bb as usize],
-        call_equity:equity,
-    })
+    Ok(settle_leaf(leaf,stack_bb,equity))
+}
+
+/// Runtime persisted exact HU path. Every blocker-compatible positive-mass
+/// jammer combo must already exist in `lookup`. Missing exact payoff data fails
+/// closed and never triggers direct enumeration or sampled equity implicitly.
+pub fn persisted_bb_leaf_action_values(
+    leaf:BbHuLeaf,
+    stack_bb:f64,
+    bb_combo_index:usize,
+    jammer_range:&ComboRange,
+    blockers:&BlockerMatrix,
+    lookup:&HuPayoffLookup,
+)->Result<ExactHuLeafActionValues,String>{
+    if bb_combo_index>=COMBO_COUNT{return Err("BB combo index out of range".into());}
+    let equity=persisted_equity_vs_range(bb_combo_index,jammer_range,blockers,lookup)?;
+    Ok(settle_leaf(leaf,stack_bb,equity))
 }
