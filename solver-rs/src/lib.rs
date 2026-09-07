@@ -4,6 +4,7 @@ pub mod equity;
 pub mod equity_cache;
 pub mod evaluator;
 pub mod joint;
+pub mod leaf_ev;
 pub mod range;
 pub mod range_equity;
 pub mod regret;
