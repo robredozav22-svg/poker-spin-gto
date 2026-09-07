@@ -16,6 +16,7 @@ pub mod joint;
 pub mod leaf_cfr;
 pub mod leaf_ev;
 pub mod matrix_game;
+pub mod payoff_build;
 pub mod payoff_lookup;
 pub mod payoff_table;
 pub mod range;
