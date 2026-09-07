@@ -56,3 +56,6 @@ jobs:
       - name: Run payoff manifest integrity smoke
         working-directory: solver-rs
         run: cargo run --release --bin payoff_manifest_smoke
+      - name: Run HU exact generation economics benchmark
+        working-directory: solver-rs
+        run: cargo run --release --bin hu_generation_economics
