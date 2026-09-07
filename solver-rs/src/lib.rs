@@ -18,6 +18,7 @@ pub mod exact_range_equity3;
 pub mod independent_exact_eval;
 pub mod joint;
 pub mod kuhn_cfr;
+pub mod leduc_cfr;
 pub mod leaf_cfr;
 pub mod leaf_ev;
 pub mod matrix_game;
