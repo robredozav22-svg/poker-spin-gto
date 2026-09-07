@@ -1,14 +1,6 @@
-name: 3Max Fixed Corpus Benchmark
+name: 3Max Fixed Corpus Benchmark [ARCHIVED]
 
 on:
-  pull_request:
-    paths:
-      - 'solver/three_max_batch_cfr.py'
-      - 'solver/run_three_max_batch.py'
-      - 'solver/run_three_max_batch_convergence.py'
-      - 'solver/convergence.py'
-      - 'tests/test_solver.py'
-      - '.github/workflows/solver-three-max-batch.yml'
   workflow_dispatch:
 
 permissions:
