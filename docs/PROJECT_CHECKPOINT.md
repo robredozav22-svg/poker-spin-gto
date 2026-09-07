@@ -1,9 +1,10 @@
 # Poker Spin GTO — Project Recovery Checkpoint
 
-Last updated: 2026-09-07
+Last updated: 2026-09-07 13:45 +05
 Branch: `chat-aligned-v2`
 Main branch policy: DO NOT modify `main` until research/validation gates are passed and user explicitly approves promotion.
 Project status: `RESEARCH_ONLY`
+Latest confirmed Rust CI gate: run `34102255817` on commit `8b12343c6470d311b89a640bc8b0726e82a1bb77` = SUCCESS.
 
 This file is the persistent recovery point for future chats. Read this file first before continuing solver or chart work.
 
@@ -82,19 +83,20 @@ Public chart values must not be labelled `VERIFIED_EXACT` unless the exact game 
 Location: `solver-rs/`
 
 Implemented foundations:
-- exact 52-card deck representation;
-- 1,326 exact private two-card combos;
+- exact 52-card / 1,326-combo representation;
 - 169-class aggregation with suit-variant dispersion audit;
 - blocker compatibility matrix/bitsets;
 - exact joint three-player card removal;
 - normalized and blocker-conditioned ranges;
 - direct Hold'em evaluator;
 - direct seven-card evaluator validated against brute-force 21-five-card-subset oracle on 20,000 deterministic hands;
-- sampled HU common-board equity path;
-- sampled genuine 3-way common-board equity path;
+- sampled HU common-board equity path retained for cross-checks;
+- sampled genuine 3-way common-board equity path retained for cross-checks;
 - suit-canonical equity caches;
 - exact HU preflop board enumeration;
 - exact 3-way preflop board enumeration;
+- exact 3-way range integration with joint blockers;
+- exact 3-way terminal BB Fold/Call leaf after BTN jam + SB call;
 - terminal pot settlement with blinds/dead money/unmatched returns;
 - chip-EV bridges;
 - regret matching / CFR+ primitives;
@@ -102,9 +104,7 @@ Implemented foundations:
 - Bayesian P(hand | action) range updates;
 - exact restricted best-response/NashConv diagnostic;
 - strategy stability metrics;
-- exact-payoff restricted coupled solver;
-- exact 3-way range integration foundation;
-- exact BB leaf foundation for `BTN jam -> SB call -> BB Fold/Call`.
+- exact-payoff restricted coupled solver.
 
 Important source files:
 - `solver-rs/src/evaluator.rs`
@@ -129,7 +129,7 @@ Complete enumeration after four hole cards:
 - KK equity: 0.187445103;
 - wins/losses/ties: 1,388,072 / 317,694 / 6,538;
 - zero-sum error: 0;
-- measured release runtime on GitHub runner after compilation: about 0.22-0.23 sec/matchup.
+- measured release runtime on GitHub runner after compilation: about 0.21-0.23 sec/matchup.
 
 Decision: HU all-in terminal payoffs should use exact equity, not Monte Carlo.
 
@@ -142,9 +142,28 @@ Complete enumeration after six hole cards:
 - outright wins: 909,810 / 256,920 / 198,576;
 - three-way ties: 5,448;
 - zero-sum error approximately 1.15e-13;
-- measured release runtime after compilation: about 0.27 sec/matchup.
+- measured release runtime after compilation: about 0.25-0.27 sec/matchup.
 
 Decision: 3-way all-in terminal payoffs should also use exact equity. Sampled 3-way remains only a research/cross-check path.
+
+### Exact 3-way terminal leaf
+
+Node:
+`BTN jam -> SB call -> BB [Fold, Call]`
+
+Release smoke fixture:
+- BTN = AA;
+- SB = KK;
+- BB = QQ;
+- compatible BTN/SB range pairs after BB blockers: 1;
+- BB fold EV: -1.000000000 bb;
+- BB call EV: -4.491414214 bb;
+- exact equities in integrator order BB/BTN/SB: 0.146191074 / 0.665054415 / 0.188754510;
+- exact 3-way cache: 1 miss, 0 hits on first evaluation.
+
+CI result: SUCCESS, run `34102255817`.
+
+Decision: `exact_leaf3.rs` is now the canonical RESEARCH_ONLY payoff operator for this modeled all-in BB decision. The older sampled 3-way leaf remains a cross-check path only.
 
 ### Exact restricted coupled game
 
@@ -192,27 +211,29 @@ QuickGTO/`sol5000/gto` is not an authoritative Spin preflop solver. It may only 
 
 ## 8. Current exact all-in migration state
 
-Completed:
+Completed and CI-confirmed:
 - exact HU enumerator;
 - exact HU cache;
 - exact 3-way enumerator;
 - exact 3-way cache;
-- exact 3-way range integrator;
-- `exact_leaf3.rs` implementing the exact BB decision after `BTN jam -> SB call`.
+- exact 3-way joint-range integrator;
+- exact BB Fold/Call leaf after `BTN jam -> SB call`;
+- exact-payoff restricted `SB jam -> BB Fold/Call` coupled game.
 
-Immediate current gate:
-- compile and release-smoke `exact_leaf3.rs` through CI;
-- verify fold EV, exact call EV, joint compatible pair count and cache behavior;
-- only after green CI mark this leaf canonical.
+Remaining in the all-in migration:
+- exact HU range-equity helper;
+- migrate remaining HU all-in leaf calculations away from sampled equity;
+- add sampled-vs-exact fixture comparisons;
+- explicitly mark sampled terminal payoff paths non-canonical.
 
 ## 9. Next action plan — strict order
 
 ### Phase A — finish exact all-in terminal layer
-1. Pass CI for `exact_leaf3`.
-2. Add exact HU range-equity helper and convert remaining HU all-in leaves to exact cached payoff operators.
-3. Convert `BTN jam -> SB call -> BB call` and other genuine 3-way all-in branches to exact cached payoff operators.
-4. Add equivalence/cross-check tests between sampled and exact operators on fixed fixtures, allowing sampling tolerance only on sampled side.
-5. Mark sampled all-in paths deprecated-for-canonical-payoff but keep them for audit/research.
+1. Add exact HU range-equity helper using `ExactEquityCache` + blocker-conditioned opponent ranges.
+2. Add canonical exact HU Fold/Call leaf operators for currently supported all-in contexts.
+3. Route the existing restricted/all-in research paths through exact operators where practical, retaining sampled versions for audit only.
+4. Add fixed-fixture sampled-vs-exact comparisons; tolerance applies only to sampled results.
+5. Mark sampled all-in payoff paths deprecated-for-canonical-payoff in code/docs.
 
 ### Phase B — solver correctness independent of poker evaluator
 6. Add small synthetic precomputed-payoff games with analytically known equilibria.
@@ -220,9 +241,9 @@ Immediate current gate:
 8. Add deterministic promotion thresholds to CI diagnostics, but do not automatically promote chart data.
 
 ### Phase C — scale exact payoff preparation
-9. Measure number of unique suit-canonical HU and 3-way matchup classes needed by target sparse/full ranges.
-10. Design persistent/precomputed exact payoff tables so repeated solver runs do not recompute enumerations.
-11. Benchmark memory/runtime before full 1,326-support coupled solves.
+9. Measure the number of unique suit-canonical HU and 3-way matchup classes required by target sparse/full supports.
+10. Design persistent/precomputed exact payoff tables so repeated solver runs do not recompute full board enumeration.
+11. Benchmark memory/runtime before any full 1,326-support coupled solve.
 
 ### Phase D — expand preflop tree
 12. Expand beyond the current push/fold subgame only after Phases A-C are stable.
@@ -252,11 +273,11 @@ No self-generated chart goes to production because CI is green.
 
 Before any solver output can be considered for chart promotion:
 - exact tree assumptions documented;
-- payoff profile documented;
+- payout profile documented;
 - numerical convergence measured;
 - best-response/exploitability metric measured where applicable;
 - independent-run or exact-payoff stability established;
-- 1326 -> 169 suit dispersion audited;
+- 1,326 -> 169 suit dispersion audited;
 - external holdout comparison performed;
 - no missing branch silently substituted;
 - user explicitly approves promotion to `main`.
@@ -266,15 +287,17 @@ Before any solver output can be considered for chart promotion:
 Workflow:
 `.github/workflows/solver-rust-core.yml`
 
-Current intended checks include:
-- `cargo test --all`;
-- deterministic sampled sparse convergence benchmark;
-- exact HU smoke;
-- exact-payoff restricted convergence benchmark;
-- exact 3-way smoke;
-- exact 3-way terminal leaf smoke.
+Latest confirmed gate:
+- run: `34102255817`;
+- result: SUCCESS;
+- library unit tests: 75 passed, 0 failed;
+- sampled sparse convergence benchmark: success;
+- exact HU smoke: success;
+- exact restricted NashConv benchmark: success;
+- exact 3-way smoke: success;
+- exact 3-way terminal leaf smoke: success.
 
-When continuing in a new chat, first check the newest CI run on `chat-aligned-v2` before editing solver code.
+When continuing in a new chat, first inspect the newest `Rust Solver Core` run on `chat-aligned-v2`; a newer solver commit may supersede this run.
 
 ## 12. Repository continuity protocol
 
@@ -296,13 +319,11 @@ If chat context is lost, recovery sequence is:
 
 ## 13. Immediate next step at this checkpoint
 
-Wait for/check CI on the commit that added `exact_leaf3_smoke`. If green:
-- record the exact BB call/fold smoke output;
-- mark exact 3-way BB leaf canonical for research solver use;
-- update this checkpoint and solver status;
-- then implement exact HU range-equity migration for remaining HU all-in leaves.
+Implement exact HU range-equity and canonical exact HU all-in leaf operators using `ExactEquityCache`.
 
-If CI fails:
-- do not bypass it;
-- inspect the failing compile/math assertion;
-- fix the exact leaf before expanding further.
+Then:
+- run the full Rust CI gate;
+- record exact HU range/leaf smoke outputs;
+- update `SOLVER_EXPERIMENT_STATUS.md` and this file;
+- add/update PR #1 checkpoint comment;
+- only then proceed to sampled-vs-exact cross-check/deprecation work.
