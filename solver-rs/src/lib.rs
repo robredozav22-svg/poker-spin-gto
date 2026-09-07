@@ -1,4 +1,5 @@
 pub mod accuracy_policy;
+pub mod benchmark_claim;
 pub mod blockers;
 pub mod cards;
 pub mod class_aggregation;
