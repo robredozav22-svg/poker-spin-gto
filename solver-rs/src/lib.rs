@@ -17,6 +17,7 @@ pub mod exact_range_equity;
 pub mod exact_range_equity3;
 pub mod holdem_river_cfr;
 pub mod holdem_turn_chance;
+pub mod holdem_turn_river_cfr;
 pub mod independent_exact_eval;
 pub mod joint;
 pub mod kuhn_cfr;
