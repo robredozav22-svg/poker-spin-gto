@@ -1,7 +1,8 @@
 name: Postflop Backend Compatibility
 
 on:
-  pull_request:
+  push:
+    branches: [chat-aligned-v2]
     paths:
       - 'solver/postflop_provider.py'
       - 'solver/postflop_solution_reader.py'
