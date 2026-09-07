@@ -1,5 +1,6 @@
 pub mod blockers;
 pub mod cards;
+pub mod equity;
 pub mod evaluator;
 pub mod joint;
 pub mod range;
