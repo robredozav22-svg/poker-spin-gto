@@ -47,3 +47,6 @@ jobs:
       - name: Run canonical payoff census benchmark
         working-directory: solver-rs
         run: cargo run --release --bin canonical_payoff_census
+      - name: Run persisted payoff lookup equivalence smoke
+        working-directory: solver-rs
+        run: cargo run --release --bin payoff_lookup_smoke
