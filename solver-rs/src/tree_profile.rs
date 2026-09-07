@@ -1,4 +1,4 @@
-use crate::preflop_tree::{GameFormat,PayoutProfile,TreeVerification};
+use crate::preflop_tree::{GameFormat,PayoutProfile,PreflopDecisionSpec,TreeVerification};
 
 #[derive(Debug,Clone,Copy,PartialEq,Eq,Hash)]
 pub enum TreeFamily{
@@ -61,6 +61,18 @@ impl TreeProfileSpec{
         }
         Ok(Self{id,family,format,payout,verification,source_id,sizing_families,notes})
     }
+
+    pub fn validate_node(&self,node:&PreflopDecisionSpec)->Result<(),String>{
+        if node.key.tree_profile_id!=self.id{
+            return Err(format!("node tree_profile_id '{}' does not match registered profile '{}'",node.key.tree_profile_id,self.id));
+        }
+        if node.key.format!=self.format{return Err("node format does not match tree profile".into());}
+        if node.key.payout!=self.payout{return Err("node payout profile does not match tree profile".into());}
+        if node.evidence.verification==TreeVerification::VerifiedExactTree && self.verification!=TreeVerification::VerifiedExactTree{
+            return Err("node cannot be VERIFIED_EXACT when tree profile is not VERIFIED_EXACT".into());
+        }
+        Ok(())
+    }
 }
 
 pub fn screen_reference_spins_15bb_v1()->TreeProfileSpec{
@@ -79,6 +91,8 @@ pub fn screen_reference_spins_15bb_v1()->TreeProfileSpec{
 #[cfg(test)]
 mod tests{
     use super::*;
+    use crate::preflop_tree::{ActionEdge,Bb100,ContinuationContract,PreflopAction,PreflopNodeKey,TreeEvidence};
+    use crate::tree::Player;
 
     #[test]
     fn screenshot_profile_is_explicitly_non_exact(){
@@ -103,5 +117,30 @@ mod tests{
             "dup",TreeFamily::InternalResearch,GameFormat::Spin3Max,PayoutProfile::WinnerTakeAllChipEv,
             TreeVerification::MissingExact,"internal",vec![SizingFamily::Jam,SizingFamily::Jam],"",
         ).is_err());
+    }
+
+    #[test]
+    fn exact_node_cannot_be_promoted_under_non_exact_profile(){
+        let profile=screen_reference_spins_15bb_v1();
+        let key=PreflopNodeKey::new(
+            GameFormat::Spin3Max,PayoutProfile::WinnerTakeAllChipEv,profile.id.clone(),Bb100(1500),Player::Btn,vec![]
+        ).unwrap();
+        let node=PreflopDecisionSpec::new(
+            key,
+            vec![
+                ActionEdge{action:PreflopAction::Fold,continuation:ContinuationContract::ChildDecision},
+                ActionEdge{action:PreflopAction::JamTo(Bb100(1500)),continuation:ContinuationContract::ChildDecision},
+            ],
+            TreeEvidence::new(TreeVerification::VerifiedExactTree,"bad-promotion").unwrap(),
+        ).unwrap();
+        let err=profile.validate_node(&node).unwrap_err();
+        assert!(err.contains("cannot be VERIFIED_EXACT"));
+    }
+
+    #[test]
+    fn matching_screen_reference_node_is_accepted(){
+        let profile=screen_reference_spins_15bb_v1();
+        let node=crate::reference_tree_15bb::btn_first_in();
+        profile.validate_node(&node).unwrap();
     }
 }
