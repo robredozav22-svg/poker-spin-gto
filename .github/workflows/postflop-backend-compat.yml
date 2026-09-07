@@ -1,0 +1,52 @@
+name: Postflop Backend Compatibility
+
+on:
+  pull_request:
+    paths:
+      - 'solver/postflop_provider.py'
+      - 'solver/postflop_solution_reader.py'
+      - 'solver/check_postflop_compat.py'
+      - 'tests/test_postflop_solution_reader.py'
+      - '.github/workflows/postflop-backend-compat.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compatibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout poker-spin-gto
+        uses: actions/checkout@v4
+        with:
+          path: app
+      - name: Checkout MIT postflop engine source
+        uses: actions/checkout@v4
+        with:
+          repository: ucsandman/postflop
+          path: postflop-engine
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build postflop solver CLI
+        working-directory: postflop-engine
+        run: cargo build --release -p solver-cli
+      - name: Solve repository fixture from scratch
+        working-directory: postflop-engine
+        run: |
+          ./target/release/solver solve \
+            --config web-fixture.toml \
+            --max-iterations 20 \
+            --report-every 10 \
+            --out solution-smoke.json
+      - name: Validate measured solution contract
+        working-directory: app
+        run: |
+          python -m solver.check_postflop_compat \
+            --solution ../postflop-engine/solution-smoke.json
+      - name: Run reader regression tests
+        working-directory: app
+        run: python -m unittest tests.test_postflop_solution_reader -v
