@@ -1,10 +1,6 @@
 name: Rust Solver Core
 
 on:
-  pull_request:
-    paths:
-      - 'solver-rs/**'
-      - '.github/workflows/solver-rust-core.yml'
   push:
     branches: [chat-aligned-v2]
     paths:
