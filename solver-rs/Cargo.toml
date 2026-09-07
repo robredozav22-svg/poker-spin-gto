@@ -7,6 +7,9 @@ edition = "2021"
 name = "spins_solver_core"
 path = "src/lib.rs"
 
+[dependencies]
+sha2 = "0.10"
+
 [profile.release]
 lto = "thin"
 codegen-units = 1
