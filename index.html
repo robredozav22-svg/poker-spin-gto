@@ -12,7 +12,7 @@
     <header class="topbar">
       <div>
         <div class="brand">SPINS</div>
-        <div class="mode">REVIEW · V45 prototype</div>
+        <div id="modeLabel" class="mode">REVIEW · V45 prototype</div>
       </div>
       <div class="top-actions">
         <button id="huToggle" class="stack-btn compact">HU</button>
@@ -20,16 +20,25 @@
       </div>
     </header>
 
+    <section class="mode-switch" aria-label="Product mode">
+      <button id="reviewMode" class="mode-btn active">REVIEW</button>
+      <button id="trainMode" class="mode-btn">TRAIN</button>
+    </section>
+
     <section id="stacks" class="stack-strip" aria-label="Effective stack"></section>
 
     <section class="nav-row" aria-label="History navigation">
       <button id="backBtn" class="nav-btn">← BACK</button>
       <button id="forwardBtn" class="nav-btn">FORWARD →</button>
       <button id="recentToggle" class="nav-btn">RECENT</button>
+      <button id="favoriteBtn" class="nav-btn">☆ FAVORITE</button>
     </section>
 
     <section id="recentPanel" class="recent-panel hidden" aria-label="Recent spots"></section>
+    <section id="favoritePanel" class="recent-panel hidden" aria-label="Favorite spots"></section>
     <section id="status" class="status"></section>
+
+    <section id="trainPrompt" class="train-prompt hidden"></section>
 
     <section class="grid-wrap">
       <div id="grid" class="hand-grid" aria-label="13 by 13 hand matrix"></div>
@@ -40,9 +49,10 @@
     <section id="tree" class="tree" aria-label="Decision tree"></section>
 
     <p class="footer-note">
-      REVIEW предназначен для разбора и обучения вне активной игры. Узлы со статусом CROSS-CHECK используют только видимые aggregate frequencies из референсов. Индивидуальные hand frequencies не показываются до VERIFIED_EXACT импорта.
+      REVIEW/TRAIN предназначены для обучения и разбора вне активной игры. APPROX/CROSS-CHECK данные не выдаются за VERIFIED_EXACT.
     </p>
   </main>
+  <script src="ui/router.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
