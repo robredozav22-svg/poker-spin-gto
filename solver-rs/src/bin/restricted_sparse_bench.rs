@@ -1,6 +1,8 @@
 use spins_solver_core::cards::{all_combos,COMBO_COUNT};
 use spins_solver_core::class_aggregation::class_label;
+use spins_solver_core::equity_cache::EquityCache;
 use spins_solver_core::range::ComboRange;
+use spins_solver_core::restricted_eval::evaluate_restricted_sampled_nashconv;
 use spins_solver_core::restricted_subgame::SbJamBbResponseSubgame;
 use spins_solver_core::strategy_metrics::{marginal_action_probability,max_action_delta_on_support,weighted_action_mae};
 
@@ -20,6 +22,7 @@ fn main(){
     let bb_prior=range_for_labels(&["KK","AQo","65s"]);
     let mut game=SbJamBbResponseSubgame::new(8.0,sb_prior.clone(),bb_prior.clone())
         .expect("subgame construction");
+    let mut eval_cache=EquityCache::new();
 
     let samples_per_matchup=500u64;
     let seed=20260907u64;
@@ -56,9 +59,28 @@ fn main(){
             let sb_avg_mae=weighted_action_mae(&sb_prior,&prev_checkpoint_sb_avg,&sb_avg).unwrap();
             let bb_avg_mae=weighted_action_mae(&bb_prior,&prev_checkpoint_bb_avg,&bb_avg).unwrap();
 
+            let current_eval=evaluate_restricted_sampled_nashconv(
+                8.0,&sb_prior,&bb_prior,&sb,&bb,&game.blockers,&mut eval_cache,samples_per_matchup,seed
+            ).expect("current strategy evaluation");
+            let average_eval=evaluate_restricted_sampled_nashconv(
+                8.0,&sb_prior,&bb_prior,&sb_avg,&bb_avg,&game.blockers,&mut eval_cache,samples_per_matchup,seed
+            ).expect("average strategy evaluation");
+
             println!(
-                "sweep={sweep} current_sb_jam={sb_jam:.6} current_bb_call={bb_call:.6} avg_sb_jam={sb_avg_jam:.6} avg_bb_call={bb_avg_call:.6} current_sb_max={sb_current_max:.6} current_bb_max={bb_current_max:.6} current_sb_mae={sb_current_mae:.6} current_bb_mae={bb_current_mae:.6} avg_sb_max={sb_avg_max:.6} avg_bb_max={bb_avg_max:.6} avg_sb_mae={sb_avg_mae:.6} avg_bb_mae={bb_avg_mae:.6} mean_bb_jam_reach={:.6} cache_hits={} cache_misses={}",
-                d.mean_bb_jam_reach,d.hu_cache_hits,d.hu_cache_misses
+                "sweep={sweep} current_sb_jam={sb_jam:.6} current_bb_call={bb_call:.6} avg_sb_jam={sb_avg_jam:.6} avg_bb_call={bb_avg_call:.6} current_sb_max={sb_current_max:.6} current_bb_max={bb_current_max:.6} current_sb_mae={sb_current_mae:.6} current_bb_mae={bb_current_mae:.6} avg_sb_max={sb_avg_max:.6} avg_bb_max={bb_avg_max:.6} avg_sb_mae={sb_avg_mae:.6} avg_bb_mae={bb_avg_mae:.6} current_nashconv={:.6} avg_nashconv={:.6} current_sb_br_gain={:.6} current_bb_br_gain={:.6} avg_sb_br_gain={:.6} avg_bb_br_gain={:.6} current_sb_value={:.6} avg_sb_value={:.6} legal_pairs={} joint_z={:.6} mean_bb_jam_reach={:.6} train_cache_hits={} train_cache_misses={} eval_cache_hits={} eval_cache_misses={}",
+                current_eval.sampled_nashconv,
+                average_eval.sampled_nashconv,
+                current_eval.sb_br_gain,
+                current_eval.bb_br_gain,
+                average_eval.sb_br_gain,
+                average_eval.bb_br_gain,
+                current_eval.current_sb_value,
+                average_eval.current_sb_value,
+                current_eval.legal_pair_count,
+                current_eval.joint_normalizer,
+                d.mean_bb_jam_reach,
+                d.hu_cache_hits,d.hu_cache_misses,
+                eval_cache.hits(),eval_cache.misses()
             );
 
             prev_checkpoint_sb=sb;
@@ -68,5 +90,5 @@ fn main(){
         }
     }
 
-    println!("NOTE: checkpoint stability diagnostics only; not NashConv, not exploitability, and not chart data");
+    println!("NOTE: sampled NashConv is only for this restricted fixed-payoff game; not full Spin GTO and not chart data");
 }
