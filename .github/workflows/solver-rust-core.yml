@@ -50,3 +50,6 @@ jobs:
       - name: Run persisted payoff lookup equivalence smoke
         working-directory: solver-rs
         run: cargo run --release --bin payoff_lookup_smoke
+      - name: Run compute-missing payoff build smoke
+        working-directory: solver-rs
+        run: cargo run --release --bin payoff_build_smoke
