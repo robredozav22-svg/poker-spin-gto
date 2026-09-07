@@ -1,6 +1,7 @@
 use crate::blockers::BlockerMatrix;
 use crate::cards::{all_combos,COMBO_COUNT};
 use crate::exact_equity::ExactEquityCache;
+use crate::payoff_lookup::HuPayoffLookup;
 use crate::range::ComboRange;
 use crate::regret::RegretTable;
 use crate::StrategySnapshot;
@@ -33,12 +34,16 @@ pub struct ExactRestrictedSubgame{
     pub sb_regrets:RegretTable, // [Fold,Jam]
     pub bb_regrets:RegretTable, // [Fold,Call]
     pub blockers:BlockerMatrix,
+    /// Direct-enumeration cache is populated by `new` and intentionally empty
+    /// for `new_from_payoff_lookup`; repeated runtime sweeps never need boards.
     pub equity_cache:ExactEquityCache,
     pub pairs:Vec<ExactPairPayoff>,
     pub joint_normalizer:f64,
 }
 
 impl ExactRestrictedSubgame{
+    /// Build/research constructor: exact board enumeration is performed once for
+    /// every canonical HU matchup needed by the restricted supports.
     pub fn new(stack_bb:f64,sb_prior:ComboRange,bb_prior:ComboRange)->Result<Self,String>{
         if stack_bb<1.0{return Err("stack must be at least 1bb".into());}
         let blockers=BlockerMatrix::build();
@@ -60,8 +65,57 @@ impl ExactRestrictedSubgame{
                 z+=raw;
             }
         }
+        Self::from_prepared(stack_bb,sb_prior,bb_prior,blockers,equity_cache,pairs,z)
+    }
+
+    /// Runtime constructor: all required legal matchup payoffs must already be
+    /// present in the persisted exact lookup. Missing data fails closed. No
+    /// board enumeration and no sampled fallback occurs here.
+    pub fn new_from_payoff_lookup(
+        stack_bb:f64,
+        sb_prior:ComboRange,
+        bb_prior:ComboRange,
+        lookup:&HuPayoffLookup,
+    )->Result<Self,String>{
+        if stack_bb<1.0{return Err("stack must be at least 1bb".into());}
+        let blockers=BlockerMatrix::build();
+        let combos=all_combos();
+        let sb_support:Vec<usize>=sb_prior.weights().iter().enumerate().filter_map(|(i,w)|if *w>0.0{Some(i)}else{None}).collect();
+        let bb_support:Vec<usize>=bb_prior.weights().iter().enumerate().filter_map(|(i,w)|if *w>0.0{Some(i)}else{None}).collect();
+        let mut pairs=Vec::new();let mut z=0.0;
+        for &i in &sb_support{
+            for &j in &bb_support{
+                if !blockers.compatible(i,j){continue;}
+                let raw=sb_prior.weights()[i]*bb_prior.weights()[j];
+                if raw<=0.0{continue;}
+                let eq=lookup.get_equity(combos[i],combos[j])?
+                    .ok_or_else(||format!("missing exact HU payoff for restricted pair sb={} bb={}",i,j))?;
+                let sb_showdown=eq.hero*(2.0*stack_bb)-stack_bb;
+                let bb_showdown=eq.villain*(2.0*stack_bb)-stack_bb;
+                if (sb_showdown+bb_showdown).abs()>1e-9{return Err("persisted restricted showdown payoff is not zero sum".into());}
+                pairs.push(ExactPairPayoff{sb_combo:i,bb_combo:j,raw_joint_weight:raw,sb_showdown_ev:sb_showdown,bb_showdown_ev:bb_showdown});
+                z+=raw;
+            }
+        }
+        Self::from_prepared(stack_bb,sb_prior,bb_prior,blockers,ExactEquityCache::new(),pairs,z)
+    }
+
+    fn from_prepared(
+        stack_bb:f64,
+        sb_prior:ComboRange,
+        bb_prior:ComboRange,
+        blockers:BlockerMatrix,
+        equity_cache:ExactEquityCache,
+        pairs:Vec<ExactPairPayoff>,
+        z:f64,
+    )->Result<Self,String>{
         if z<=f64::EPSILON{return Err("no legal private-hand pairs".into());}
-        Ok(Self{stack_bb,sb_prior,bb_prior,sb_regrets:RegretTable::new(COMBO_COUNT,2),bb_regrets:RegretTable::new(COMBO_COUNT,2),blockers,equity_cache,pairs,joint_normalizer:z})
+        Ok(Self{
+            stack_bb,sb_prior,bb_prior,
+            sb_regrets:RegretTable::new(COMBO_COUNT,2),
+            bb_regrets:RegretTable::new(COMBO_COUNT,2),
+            blockers,equity_cache,pairs,joint_normalizer:z,
+        })
     }
 
     pub fn sb_current_strategy(&self)->StrategySnapshot{self.sb_regrets.current_strategy_snapshot()}
