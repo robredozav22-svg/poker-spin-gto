@@ -65,3 +65,6 @@ jobs:
       - name: Run broader persisted restricted solver benchmark
         working-directory: solver-rs
         run: cargo run --release --bin restricted_persisted_broad_bench
+      - name: Run bounded 12x12 persisted restricted solver benchmark
+        working-directory: solver-rs
+        run: cargo run --release --bin restricted_persisted_12x12_bench
