@@ -12,6 +12,10 @@ on:
       - '.github/workflows/phase-e-holdem-river.yml'
   workflow_dispatch:
 
+concurrency:
+  group: phase-e-holdem-river-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
