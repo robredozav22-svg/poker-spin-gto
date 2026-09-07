@@ -33,6 +33,7 @@ pub mod restricted_subgame;
 pub mod sb_ev;
 pub mod strategy_metrics;
 pub mod strategy_range;
+pub mod strategy_record;
 pub mod terminal;
 pub mod terminal_ev;
 pub mod tree;
