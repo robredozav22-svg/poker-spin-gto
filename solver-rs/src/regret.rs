@@ -46,6 +46,36 @@ impl RegretTable {
         }
     }
 
+    /// Apply one full action-value CFR update for an infoset.
+    ///
+    /// `action_values[a]` is the counterfactual value of taking action `a`.
+    /// The current mixed strategy is computed from regrets, the node value is
+    /// the strategy-weighted average, and each regret receives
+    /// `opponent_reach * (action_value - node_value)`. Strategy averaging uses
+    /// `own_reach`, kept separate from regret weighting.
+    pub fn update_from_action_values(
+        &mut self,
+        infoset: usize,
+        action_values: &[f64],
+        opponent_reach: f64,
+        own_reach: f64,
+    ) -> f64 {
+        assert_eq!(action_values.len(), self.actions);
+        let strategy = self.current_strategy(infoset);
+        let node_value: f64 = strategy
+            .iter()
+            .zip(action_values.iter())
+            .map(|(p, v)| p * v)
+            .sum();
+        let delta: Vec<f64> = action_values
+            .iter()
+            .map(|v| opponent_reach * (v - node_value))
+            .collect();
+        self.add_regret_row(infoset, &delta);
+        self.accumulate_strategy_row(infoset, &strategy, own_reach);
+        node_value
+    }
+
     pub fn dcfr_discount(&mut self, iteration: u64, alpha: f64, beta: f64, gamma: f64) {
         assert!(iteration > 0);
         let t = iteration as f64;
@@ -109,6 +139,15 @@ mod tests {
         let s = table.current_strategy(0);
         assert!((s[0] - 0.75).abs() < 1e-12);
         assert!((s[1] - 0.25).abs() < 1e-12);
+    }
+
+    #[test]
+    fn full_action_value_update_moves_toward_better_action() {
+        let mut table = RegretTable::new(1, 2);
+        let node_value = table.update_from_action_values(0, &[1.0, 3.0], 1.0, 1.0);
+        assert!((node_value - 2.0).abs() < 1e-12);
+        let s = table.current_strategy(0);
+        assert_eq!(s, vec![0.0, 1.0]);
     }
 
     #[test]
