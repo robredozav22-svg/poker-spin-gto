@@ -5,18 +5,10 @@ use crate::preflop_tree::{PreflopAction,PreflopNodeKey,TreeVerification};
 use crate::tree_catalog::{CatalogCompleteness,TreeCatalog};
 
 #[derive(Debug,Clone,Copy,PartialEq,Eq,Hash)]
-pub enum StrategyVerification{
-    VerifiedExact,
-    CrossChecked,
-    Partial,
-    MissingExact,
-}
+pub enum StrategyVerification{VerifiedExact,CrossChecked,Partial,MissingExact}
 
 #[derive(Debug,Clone,PartialEq)]
-pub struct ComboActionFrequency{
-    pub combo_index:usize,
-    pub frequencies:Vec<(PreflopAction,f64)>,
-}
+pub struct ComboActionFrequency{pub combo_index:usize,pub frequencies:Vec<(PreflopAction,f64)>}
 
 #[derive(Debug,Clone,PartialEq)]
 pub struct StrategyRecord{
@@ -41,26 +33,21 @@ impl StrategyRecord{
         if source_id.trim().is_empty(){return Err("strategy source_id must not be empty".into());}
         if solver_profile_id.trim().is_empty(){return Err("solver_profile_id must not be empty".into());}
         if node.tree_profile_id!=catalog.profile.id{return Err("strategy node tree profile does not match catalog".into());}
-        if !catalog.nodes.iter().any(|n|n.key==node){return Err("strategy node is not present in tree catalog".into());}
+        let node_spec=catalog.nodes.iter().find(|n|n.key==node).ok_or_else(||"strategy node is not present in tree catalog".to_string())?;
 
         if verification==StrategyVerification::VerifiedExact{
-            if catalog.profile.verification!=TreeVerification::VerifiedExactTree{
-                return Err("VERIFIED_EXACT strategy requires VERIFIED_EXACT tree profile".into());
-            }
-            if catalog.completeness!=CatalogCompleteness::Complete{
-                return Err("VERIFIED_EXACT strategy requires Complete tree catalog".into());
-            }
-            if combos.len()!=COMBO_COUNT{
-                return Err(format!("VERIFIED_EXACT strategy requires all {COMBO_COUNT} physical combos"));
-            }
+            if catalog.profile.verification!=TreeVerification::VerifiedExactTree{return Err("VERIFIED_EXACT strategy requires VERIFIED_EXACT tree profile".into());}
+            if catalog.completeness!=CatalogCompleteness::Complete{return Err("VERIFIED_EXACT strategy requires Complete tree catalog".into());}
+            if combos.len()!=COMBO_COUNT{return Err(format!("VERIFIED_EXACT strategy requires all {COMBO_COUNT} physical combos"));}
         }
 
-        validate_combo_rows(&combos)?;
+        let legal_actions:HashSet<PreflopAction>=node_spec.edges.iter().map(|e|e.action).collect();
+        validate_combo_rows(&combos,&legal_actions)?;
         Ok(Self{node,verification,source_id,solver_profile_id,combos})
     }
 }
 
-fn validate_combo_rows(rows:&[ComboActionFrequency])->Result<(),String>{
+fn validate_combo_rows(rows:&[ComboActionFrequency],legal_actions:&HashSet<PreflopAction>)->Result<(),String>{
     let mut seen_combos=HashSet::new();
     for row in rows{
         if row.combo_index>=COMBO_COUNT{return Err(format!("combo index {} out of bounds",row.combo_index));}
@@ -69,6 +56,7 @@ fn validate_combo_rows(rows:&[ComboActionFrequency])->Result<(),String>{
         let mut seen_actions=HashSet::new();
         let mut sum=0.0f64;
         for (action,p) in &row.frequencies{
+            if !legal_actions.contains(action){return Err(format!("combo {} uses action {:?} not legal at this node",row.combo_index,action));}
             if !seen_actions.insert(*action){return Err(format!("combo {} repeats action {:?}",row.combo_index,action));}
             if !p.is_finite() || *p<0.0 || *p>1.0{return Err(format!("combo {} has invalid frequency {}",row.combo_index,p));}
             sum+=*p;
@@ -85,10 +73,6 @@ mod tests{
     use crate::tree::Player;
     use crate::tree_catalog::{CatalogCompleteness,TreeCatalog};
     use crate::tree_profile::{screen_reference_spins_15bb_v1,SizingFamily,TreeFamily,TreeProfileSpec};
-
-    fn row(i:usize)->ComboActionFrequency{
-        ComboActionFrequency{combo_index:i,frequencies:vec![(PreflopAction::Fold,0.5),(PreflopAction::JamTo(Bb100(800)),0.5)]}
-    }
 
     #[test]
     fn screenshot_tree_cannot_promote_strategy_to_exact(){
@@ -118,6 +102,16 @@ mod tests{
     }
 
     #[test]
+    fn action_not_present_at_node_fails_closed(){
+        let profile=screen_reference_spins_15bb_v1();
+        let catalog=TreeCatalog::new(profile,CatalogCompleteness::PartialReference,crate::reference_tree_15bb::all_reference_specs()).unwrap();
+        let node=crate::reference_tree_15bb::btn_first_in().key;
+        let bad=ComboActionFrequency{combo_index:0,frequencies:vec![(PreflopAction::CallTo(Bb100(200)),1.0)]};
+        let err=StrategyRecord::new(&catalog,node,StrategyVerification::Partial,"fixture","fixture",vec![bad]).unwrap_err();
+        assert!(err.contains("not legal at this node"));
+    }
+
+    #[test]
     fn exact_requires_all_1326_physical_combos(){
         let profile=TreeProfileSpec::new(
             "exact-fixture",TreeFamily::InternalResearch,GameFormat::SpinHeadsUp,PayoutProfile::WinnerTakeAllChipEv,
@@ -134,7 +128,8 @@ mod tests{
             TreeEvidence::new(TreeVerification::VerifiedExactTree,"fixture").unwrap(),
         ).unwrap();
         let catalog=TreeCatalog::new(profile,CatalogCompleteness::Complete,vec![root_spec,child_spec]).unwrap();
-        let err=StrategyRecord::new(&catalog,root,StrategyVerification::VerifiedExact,"fixture","solver",vec![row(0)]).unwrap_err();
+        let one=ComboActionFrequency{combo_index:0,frequencies:vec![(PreflopAction::Fold,0.5),(PreflopAction::JamTo(Bb100(800)),0.5)]};
+        let err=StrategyRecord::new(&catalog,root,StrategyVerification::VerifiedExact,"fixture","solver",vec![one]).unwrap_err();
         assert!(err.contains("all 1326 physical combos"));
     }
 }
