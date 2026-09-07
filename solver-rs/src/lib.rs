@@ -1,5 +1,6 @@
 pub mod blockers;
 pub mod cards;
+pub mod range;
 pub mod regret;
 pub mod tree;
 
