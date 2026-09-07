@@ -8,6 +8,7 @@ pub mod equity_cache;
 pub mod evaluator;
 pub mod exact_equity;
 pub mod exact_equity3;
+pub mod exact_leaf3;
 pub mod exact_range_equity3;
 pub mod joint;
 pub mod leaf_cfr;
