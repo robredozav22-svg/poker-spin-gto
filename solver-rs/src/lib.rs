@@ -9,6 +9,7 @@ pub mod leaf_ev;
 pub mod range;
 pub mod range_equity;
 pub mod regret;
+pub mod strategy_range;
 pub mod terminal;
 pub mod terminal_ev;
 pub mod tree;
