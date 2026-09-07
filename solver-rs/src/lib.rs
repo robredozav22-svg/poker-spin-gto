@@ -15,6 +15,7 @@ pub mod exact_leaf;
 pub mod exact_leaf3;
 pub mod exact_range_equity;
 pub mod exact_range_equity3;
+pub mod independent_exact_eval;
 pub mod joint;
 pub mod leaf_cfr;
 pub mod leaf_ev;
