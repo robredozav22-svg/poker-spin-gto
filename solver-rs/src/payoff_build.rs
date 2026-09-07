@@ -1,7 +1,7 @@
 use std::collections::{HashMap,HashSet};
 
-use crate::equity::HuMatchupKey;
-use crate::equity3::ThreeWayKey;
+use crate::equity::{canonical_hu_matchup,HuMatchupKey};
+use crate::equity3::{canonical_threeway,ThreeWayKey};
 use crate::exact_equity::exact_hu_equity;
 use crate::exact_equity3::exact_threeway_equity;
 use crate::payoff_table::{HuPayoffRecord,HuPayoffTable,ThreeWayPayoffRecord,ThreeWayPayoffTable};
@@ -14,16 +14,33 @@ pub struct BuildStats{
     pub output_records:usize,
 }
 
+fn validate_hu_key(key:HuMatchupKey)->Result<(),String>{
+    let hero=[key.0[0],key.0[1]];
+    let villain=[key.0[2],key.0[3]];
+    if canonical_hu_matchup(hero,villain)?!=key{return Err(format!("non-canonical HU payoff key: {:?}",key.0));}
+    Ok(())
+}
+
+fn validate_threeway_key(key:ThreeWayKey)->Result<(),String>{
+    let a=[key.0[0],key.0[1]];
+    let b=[key.0[2],key.0[3]];
+    let c=[key.0[4],key.0[5]];
+    if canonical_threeway(a,b,c)?!=key{return Err(format!("non-canonical 3-way payoff key: {:?}",key.0));}
+    Ok(())
+}
+
 pub fn build_hu_payoff_table(
     requested:&[HuMatchupKey],
     existing:Option<&HuPayoffTable>,
 )->Result<(HuPayoffTable,BuildStats),String>{
+    for key in requested{validate_hu_key(*key)?;}
     let requested_set:HashSet<HuMatchupKey>=requested.iter().copied().collect();
     let mut by_key:HashMap<HuMatchupKey,HuPayoffRecord>=HashMap::new();
     let mut reused=0usize;
 
     if let Some(table)=existing{
         for r in &table.records{
+            validate_hu_key(r.key)?;
             if by_key.insert(r.key,*r).is_some(){return Err(format!("duplicate HU key in existing table: {:?}",r.key.0));}
         }
     }
@@ -51,12 +68,14 @@ pub fn build_threeway_payoff_table(
     requested:&[ThreeWayKey],
     existing:Option<&ThreeWayPayoffTable>,
 )->Result<(ThreeWayPayoffTable,BuildStats),String>{
+    for key in requested{validate_threeway_key(*key)?;}
     let requested_set:HashSet<ThreeWayKey>=requested.iter().copied().collect();
     let mut by_key:HashMap<ThreeWayKey,ThreeWayPayoffRecord>=HashMap::new();
     let mut reused=0usize;
 
     if let Some(table)=existing{
         for r in &table.records{
+            validate_threeway_key(r.key)?;
             if by_key.insert(r.key,*r).is_some(){return Err(format!("duplicate 3-way key in existing table: {:?}",r.key.0));}
         }
     }
@@ -89,12 +108,14 @@ pub fn build_threeway_payoff_table(
 #[cfg(test)]
 mod tests{
     use super::*;
+    use crate::cards::Card;
     use crate::exact_equity::HU_PREFLOP_BOARD_COUNT;
+    fn c(r:u8,s:u8)->Card{r*4+s}
 
     #[test]
     fn hu_existing_records_are_reused_and_output_sorted(){
-        let k1=HuMatchupKey([1,2,3,4]);
-        let k2=HuMatchupKey([0,5,6,7]);
+        let k1=canonical_hu_matchup([c(12,0),c(12,1)],[c(11,2),c(11,3)]).unwrap();
+        let k2=canonical_hu_matchup([c(10,0),c(9,0)],[c(8,1),c(7,2)]).unwrap();
         let existing=HuPayoffTable{records:vec![
             HuPayoffRecord{key:k1,wins:HU_PREFLOP_BOARD_COUNT,losses:0,ties:0},
             HuPayoffRecord{key:k2,wins:0,losses:HU_PREFLOP_BOARD_COUNT,ties:0},
@@ -103,14 +124,20 @@ mod tests{
         assert_eq!(stats.requested_unique,2);
         assert_eq!(stats.reused_existing,2);
         assert_eq!(stats.computed_missing,0);
-        assert_eq!(built.records[0].key,k2);
-        assert_eq!(built.records[1].key,k1);
+        assert!(built.records.windows(2).all(|w|w[0].key.0<w[1].key.0));
     }
 
     #[test]
     fn duplicate_existing_hu_table_fails_closed(){
-        let key=HuMatchupKey([1,2,3,4]);
+        let key=canonical_hu_matchup([c(12,0),c(12,1)],[c(11,2),c(11,3)]).unwrap();
         let r=HuPayoffRecord{key,wins:HU_PREFLOP_BOARD_COUNT,losses:0,ties:0};
         assert!(build_hu_payoff_table(&[],Some(&HuPayoffTable{records:vec![r,r]})).is_err());
+    }
+
+    #[test]
+    fn noncanonical_requested_key_fails_closed(){
+        let canonical=canonical_hu_matchup([c(12,0),c(12,1)],[c(11,2),c(11,3)]).unwrap();
+        let mut bad=canonical.0;bad.swap(0,1);
+        assert!(build_hu_payoff_table(&[HuMatchupKey(bad)],None).is_err());
     }
 }
