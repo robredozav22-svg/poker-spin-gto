@@ -18,6 +18,7 @@ pub mod leaf_ev;
 pub mod matrix_game;
 pub mod payoff_build;
 pub mod payoff_lookup;
+pub mod payoff_manifest;
 pub mod payoff_table;
 pub mod range;
 pub mod range_equity;
