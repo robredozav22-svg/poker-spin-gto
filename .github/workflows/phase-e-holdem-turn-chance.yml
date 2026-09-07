@@ -1,0 +1,33 @@
+name: Phase E Holdem Turn Chance Validation
+
+on:
+  push:
+    branches: [chat-aligned-v2]
+    paths:
+      - 'solver-rs/src/holdem_turn_chance.rs'
+      - 'solver-rs/src/bin/holdem_turn_chance_smoke.rs'
+      - 'solver-rs/src/evaluator.rs'
+      - 'solver-rs/src/cards.rs'
+      - 'solver-rs/src/lib.rs'
+      - '.github/workflows/phase-e-holdem-turn-chance.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: phase-e-holdem-turn-chance-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  turn-chance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run exact turn chance unit tests
+        working-directory: solver-rs
+        run: cargo test --lib holdem_turn_chance
+      - name: Run exact turn-to-river chance smoke
+        working-directory: solver-rs
+        run: cargo run --release --bin holdem_turn_chance_smoke
