@@ -1,6 +1,7 @@
 use std::collections::{HashMap,HashSet};
 
 use crate::preflop_tree::{ContinuationContract,PreflopAction,PreflopNodeKey};
+use crate::range_state_fingerprint::RangeStateId;
 use crate::tree_catalog::TreeCatalog;
 
 #[derive(Debug,Clone,Copy,PartialEq,Eq,Hash)]
@@ -10,10 +11,7 @@ pub enum ContinuationVerification{VerifiedMeasured,CrossChecked,Partial,Missing}
 pub struct ContinuationKey{pub node:PreflopNodeKey,pub action:PreflopAction}
 
 #[derive(Debug,Clone,Copy,PartialEq,Eq,Hash)]
-pub enum ContinuationArtifactScope{
-    RangeConditioned,
-    PolicyComplete,
-}
+pub enum ContinuationArtifactScope{RangeConditioned,PolicyComplete}
 
 #[derive(Debug,Clone,PartialEq,Eq)]
 pub struct ContinuationArtifactProof{
@@ -22,13 +20,13 @@ pub struct ContinuationArtifactProof{
     pub required_states:u64,
     pub covered_states:u64,
     pub scope:ContinuationArtifactScope,
-    pub range_state_id:Option<String>,
+    pub range_state_id:Option<RangeStateId>,
 }
 
 impl ContinuationArtifactProof{
     pub fn new(
         artifact_id:impl Into<String>,checksum:impl Into<String>,required_states:u64,covered_states:u64,
-        scope:ContinuationArtifactScope,range_state_id:Option<String>,
+        scope:ContinuationArtifactScope,range_state_id:Option<RangeStateId>,
     )->Result<Self,String>{
         let artifact_id=artifact_id.into();let checksum=checksum.into();
         if artifact_id.trim().is_empty(){return Err("continuation artifact_id must not be empty".into());}
@@ -37,18 +35,18 @@ impl ContinuationArtifactProof{
         if covered_states>required_states{return Err("continuation covered_states cannot exceed required_states".into());}
         match scope{
             ContinuationArtifactScope::RangeConditioned=>{
-                if range_state_id.as_deref().map(str::trim).filter(|s|!s.is_empty()).is_none(){return Err("range-conditioned continuation artifact requires immutable range_state_id".into());}
+                if range_state_id.is_none(){return Err("range-conditioned continuation artifact requires immutable range_state_id".into());}
             }
             ContinuationArtifactScope::PolicyComplete=>{
-                if range_state_id.as_deref().map(str::trim).filter(|s|!s.is_empty()).is_some(){return Err("policy-complete continuation artifact must not masquerade as one range-conditioned state".into());}
+                if range_state_id.is_some(){return Err("policy-complete continuation artifact must not masquerade as one range-conditioned state".into());}
             }
         }
         Ok(Self{artifact_id,checksum,required_states,covered_states,scope,range_state_id})
     }
 
     pub fn is_complete(&self)->bool{self.required_states>0&&self.covered_states==self.required_states}
-    pub fn range_state_matches(&self,expected:&str)->bool{
-        self.scope==ContinuationArtifactScope::RangeConditioned&&self.range_state_id.as_deref()==Some(expected)
+    pub fn range_state_matches(&self,expected:&RangeStateId)->bool{
+        self.scope==ContinuationArtifactScope::RangeConditioned&&self.range_state_id.as_ref()==Some(expected)
     }
     pub fn generic_exact_ready(&self)->bool{
         self.is_complete()&&self.scope==ContinuationArtifactScope::PolicyComplete&&self.range_state_id.is_none()
@@ -82,7 +80,7 @@ impl ContinuationEvidence{
         self.verification==ContinuationVerification::VerifiedMeasured&&self.artifact.as_ref().map(|a|a.generic_exact_ready()).unwrap_or(false)
     }
 
-    pub fn exact_ready_for_range(&self,range_state_id:&str)->bool{
+    pub fn exact_ready_for_range(&self,range_state_id:&RangeStateId)->bool{
         self.verification==ContinuationVerification::VerifiedMeasured
             && self.artifact.as_ref().map(|a|a.is_complete()&&a.range_state_matches(range_state_id)).unwrap_or(false)
     }
@@ -118,8 +116,7 @@ impl ContinuationRegistry{
         Ok(())
     }
 
-    pub fn validate_exact_coverage_for_range(&self,catalog:&TreeCatalog,range_state_id:&str)->Result<(),String>{
-        if range_state_id.trim().is_empty(){return Err("range_state_id must not be empty".into());}
+    pub fn validate_exact_coverage_for_range(&self,catalog:&TreeCatalog,range_state_id:&RangeStateId)->Result<(),String>{
         let mut missing=0usize;let mut seen=HashSet::new();
         for node in &catalog.nodes{
             for edge in &node.edges{
@@ -137,6 +134,7 @@ impl ContinuationRegistry{
 #[cfg(test)]
 mod tests{
     use super::*;
+    use crate::range_state_fingerprint::fingerprint_range_state;
     use crate::tree_catalog::{CatalogCompleteness,TreeCatalog};
     use crate::tree_profile::screen_reference_spins_15bb_v1;
 
@@ -144,6 +142,10 @@ mod tests{
         let target=catalog.nodes.iter().find(|n|n.edges.iter().any(|e|e.continuation==ContinuationContract::RequiresPostflopEv)).unwrap();
         let action=target.edges.iter().find(|e|e.continuation==ContinuationContract::RequiresPostflopEv).unwrap().action;
         ContinuationKey{node:target.key.clone(),action}
+    }
+
+    fn range_id(label:&str)->RangeStateId{
+        fingerprint_range_state(label,&[],&[([1,2],1.0)],&[([3,4],1.0)]).unwrap()
     }
 
     #[test]
@@ -169,11 +171,12 @@ mod tests{
     fn range_conditioned_artifact_does_not_unlock_generic_exact_promotion(){
         let catalog=TreeCatalog::new(screen_reference_spins_15bb_v1(),CatalogCompleteness::PartialReference,crate::reference_tree_15bb::all_reference_specs()).unwrap();
         let key=first_required(&catalog);
-        let proof=ContinuationArtifactProof::new("artifact","abc",100,100,ContinuationArtifactScope::RangeConditioned,Some("range-v1".into())).unwrap();
+        let r1=range_id("range-v1");let r2=range_id("range-v2");
+        let proof=ContinuationArtifactProof::new("artifact","abc",100,100,ContinuationArtifactScope::RangeConditioned,Some(r1.clone())).unwrap();
         let evidence=ContinuationEvidence::new(key,ContinuationVerification::VerifiedMeasured,"fixture","model",Some(proof)).unwrap();
         assert!(!evidence.exact_ready());
-        assert!(evidence.exact_ready_for_range("range-v1"));
-        assert!(!evidence.exact_ready_for_range("range-v2"));
+        assert!(evidence.exact_ready_for_range(&r1));
+        assert!(!evidence.exact_ready_for_range(&r2));
     }
 
     #[test]
