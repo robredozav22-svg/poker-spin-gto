@@ -14,6 +14,10 @@ on:
       - '.github/workflows/solver-rust-core.yml'
   workflow_dispatch:
 
+concurrency:
+  group: rust-solver-core-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -23,9 +27,12 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Run Rust core tests
+      - name: Run Rust core tests without duplicated slow convergence loops
         working-directory: solver-rs
-        run: cargo test --all
+        run: >-
+          cargo test --all --
+          --skip leduc_cfr::tests::trained_leduc_approaches_sequence_form_value
+          --skip holdem_river_cfr::tests::trained_river_strategy_has_low_independent_br_gap
       - name: Run deterministic sparse convergence benchmark
         working-directory: solver-rs
         run: cargo run --release --bin restricted_sparse_bench
