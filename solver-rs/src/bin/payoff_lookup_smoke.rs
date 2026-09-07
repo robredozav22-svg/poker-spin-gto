@@ -1,5 +1,5 @@
 use spins_solver_core::cards::Card;
-use spins_solver_core::equity::{canonical_hu_matchup};
+use spins_solver_core::equity::canonical_hu_matchup;
 use spins_solver_core::equity3::canonical_threeway;
 use spins_solver_core::exact_equity::exact_hu_equity;
 use spins_solver_core::exact_equity3::exact_threeway_equity;
@@ -41,7 +41,11 @@ fn main(){
     assert_eq!(three_loaded.outright_wins,three_direct.outright_wins);
     assert_eq!(three_loaded.two_way_ties,three_direct.two_way_ties);
     assert_eq!(three_loaded.three_way_ties,three_direct.three_way_ties);
-    for i in 0..3{assert!((three_loaded.equities[i]-three_direct.equities[i]).abs()<1e-15);}
+    // Integer outcomes are the persisted source of truth. Direct enumeration
+    // accumulates 1/3 repeatedly on three-way ties, while reconstruction uses
+    // exact integer counts and one final division, so f64 operation ordering can
+    // differ by machine epsilon even though the exact discrete outcomes match.
+    for i in 0..3{assert!((three_loaded.equities[i]-three_direct.equities[i]).abs()<1e-12);}
 
     let missing=[c(9,0),c(8,1)];
     assert!(hu_lookup.get_equity(aa,missing).unwrap().is_none());
