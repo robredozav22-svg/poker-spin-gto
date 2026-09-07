@@ -11,6 +11,7 @@ A numerical stability run may proceed to deeper validation only if:
 - relevant root action-frequency delta across independent runs <= 0.50 percentage points;
 - maximum node combo-weighted action MAE <= 2.00 percentage points;
 - 1326 -> 169 aggregation shows acceptably small suit-variant dispersion;
+- measured exploitability / best-response diagnostics pass for the modeled game;
 - model/tree assumptions match the target Spin node;
 - external references are used only as holdout validation, never as solver training labels.
 
@@ -55,9 +56,12 @@ Implemented:
 - blocker compatibility bitsets;
 - exact joint three-player card removal;
 - normalized combo ranges and blocker-conditioned ranges;
-- self-contained 5/7-card Hold'em evaluator;
+- self-contained direct 5/7-card Hold'em evaluator;
+- direct seven-card evaluator validated against the 21-subset brute-force oracle on 20,000 deterministic seven-card hands;
 - deterministic HU common-board equity sampling with suit-isomorphic cache;
 - genuine three-way common-board equity sampling with canonical cache;
+- exact HU preflop equity enumeration over all C(48,5)=1,712,304 boards;
+- exact HU suit-canonical payoff cache;
 - HU range-equity integration;
 - joint three-way range-equity integration with mutually compatible opponent hands only;
 - zero-sum terminal settlement, dead blinds and unmatched-jam returns;
@@ -73,38 +77,86 @@ Implemented:
 - genuine three-way BB Fold/Call leaf after BTN jam + SB call;
 - SB Fold/Jam EV against the blocker-conditioned current BB response strategy;
 - coupled restricted learner for `BTN folds -> SB Fold/Jam -> BB Fold/Call`;
+- exact-payoff version of that restricted learner with all HU showdown payoffs precomputed once;
+- exact restricted best-response / NashConv evaluator;
 - BB counterfactual regret weighted by exact `P(SB Jam | BB cards)`;
 - strategy stability metrics: max action delta and prior-weighted MAE;
 - 1326 -> 169 aggregation with suit-variant dispersion retained as an audit signal;
 - deduplicated Rust CI so one relevant push creates one Rust test run.
 
-## Current restricted subgame milestone
+## Exact HU equity milestone
 
-The first coupled strategic subsystem is:
+`exact_hu_equity()` enumerates every legal five-card board after two fixed two-card hands.
+
+Measured CI smoke test, AA vs KK:
+- boards: 1,712,304;
+- AA equity: 0.812554897;
+- KK equity: 0.187445103;
+- AA wins: 1,388,072;
+- KK wins: 317,694;
+- ties: 6,538;
+- zero-sum error: 0;
+- runtime after release compilation: approximately 0.23 seconds for one complete matchup on the GitHub runner.
+
+Conclusion: Monte Carlo is no longer required for HU all-in terminal payoffs. Exact HU equity is the canonical direction for those leaves.
+
+## Exact restricted subgame milestone
+
+The first exact coupled strategic subsystem is:
 
 `BTN folds -> SB [Fold, Jam] -> BB [Fold, Call]`.
 
-This is a real mutually dependent strategy loop, but it is still only a restricted push/fold subgame and must not be labelled full Spin GTO.
+For the sparse deterministic validation support:
+- SB: AA, A5s, 76s;
+- BB: KK, AQo, 65s;
+- six legal private-hand pairs after exact card removal;
+- exact HU equity is precomputed once for each canonical legal matchup;
+- CFR sweeps then use the fixed exact payoff matrix with no equity sampling noise.
 
-Current sweep logic:
-1. freeze SB and BB current strategy snapshots;
-2. for every BB private combo, compute `P(SB Jam | BB cards)` after card removal;
-3. condition the SB jam range on the exact BB cards;
-4. compute BB Fold/Call action values;
-5. scale BB regret by the exact counterfactual jam reach;
-6. for every SB private combo, condition BB Fold/Call probabilities and call range on the exact SB cards;
-7. compute SB Fold/Jam action values;
-8. update both regret tables;
-9. retain current and average strategies separately.
+Exact NashConv progression:
+- sweep 1: 1.351545831 bb;
+- sweep 50: 0.040246151 bb;
+- sweep 100: 0.029302555 bb;
+- sweep 200: 0.015213324 bb;
+- sweep 500: 0.009025857 bb;
+- sweep 1,000: 0.006427089 bb;
+- sweep 2,000: 0.004349300 bb;
+- sweep 5,000: 0.002590215 bb;
+- sweep 10,000: 0.001778596 bb.
 
-Next validation sequence:
-1. finish `cargo test --all` on the current Rust head;
-2. deterministic sparse coupled sweeps;
-3. compare successive snapshots using max action delta / weighted MAE;
-4. independent-seed and holdout runs;
-5. optimize equity/range operators before full 1326-support solves;
-6. add a best-response / exploitability diagnostic appropriate to the restricted game;
-7. only then expand the action tree.
+At 10,000 sweeps:
+- average SB jam: 0.587024326;
+- average BB call: 0.360426620;
+- SB best-response gain: 0.001187979 bb;
+- BB best-response gain: 0.000590617 bb;
+- exact NashConv: 0.001778596 bb;
+- SB game value: 0.060849760 bb.
+
+Interpretation:
+- NashConv continues decreasing once Monte Carlo payoff noise is removed;
+- this strongly validates the regret/reach/averaging mechanics for the modeled restricted game;
+- it does NOT validate the full Spin action tree;
+- these sparse frequencies are diagnostics only and are not chart data.
+
+## Sampled-vs-exact finding
+
+With 10,000-board training equity and independent 50,000-board holdout equity at 1,000 sweeps:
+- train NashConv: 0.006012 bb;
+- holdout NashConv: 0.010583 bb;
+- gap: 0.004571 bb.
+
+The exact-payoff game removes that train/holdout equity sampling distinction entirely and continues below that noise floor. Conclusion: all-in payoff sampling was a material convergence bottleneck.
+
+## Next mathematical sequence
+
+1. benchmark exact three-way preflop equity for one fixed three-hand matchup;
+2. if runtime is practical, make exact 3-way equity/cache canonical for three-way all-in terminals;
+3. replace sampled 3-way terminal leaves such as `BTN jam -> SB call -> BB call` with exact payoff operators;
+4. retain sampled equity only as a cross-check/research path;
+5. add synthetic precomputed-payoff games to test regret/reach logic independently from poker evaluation;
+6. design canonical matchup-class precomputation before any full 1326-support exact solve;
+7. expand beyond push/fold only after exact all-in terminal math is stable;
+8. non-all-in leaves require measured postflop continuation EV, never raw-equity substitution.
 
 ## 1326 -> 169 chart policy
 
