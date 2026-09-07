@@ -1,4 +1,5 @@
 use crate::equity::EquityEstimate;
+use crate::equity3::ThreeWayEquityEstimate;
 use crate::terminal::{Seat, TerminalPot};
 
 pub fn expected_two_active_payoff(
@@ -50,6 +51,32 @@ pub fn expected_hu_payoff(
     Ok(expected_two_active_payoff(pot,hero,villain,equity.hero))
 }
 
+pub fn expected_three_active_payoff(
+    pot:&TerminalPot,
+    equities:[f64;3],
+)->Result<[f64;3],String>{
+    if pot.active.iter().filter(|v|**v).count()!=3 {
+        return Err("three-way payoff requires exactly 3 active seats".into());
+    }
+    if equities.iter().any(|e|!e.is_finite()||*e<0.0||*e>1.0){
+        return Err("three-way equity outside [0,1]".into());
+    }
+    if (equities.iter().sum::<f64>()-1.0).abs()>1e-9 {
+        return Err("three-way equities must sum to 1".into());
+    }
+    let total=pot.pot();
+    let mut payoff=[0.0;3];
+    for i in 0..3 { payoff[i]=equities[i]*total-pot.contributions[i]; }
+    Ok(payoff)
+}
+
+pub fn expected_threeway_payoff(
+    pot:&TerminalPot,
+    equity:ThreeWayEquityEstimate,
+)->Result<[f64;3],String>{
+    expected_three_active_payoff(pot,equity.equities)
+}
+
 #[cfg(test)]
 mod tests{
     use super::*;
@@ -84,8 +111,23 @@ mod tests{
     }
 
     #[test]
-    fn rejects_three_way_terminal(){
+    fn rejects_three_way_terminal_in_hu_bridge(){
         let pot=TerminalPot::for_terminal(TerminalId::BtnJamSbCallBbCall,8.0);
         assert!(expected_hu_payoff(&pot,Seat::Btn,Seat::Sb,eq(0.5)).is_err());
+    }
+
+    #[test]
+    fn three_way_equal_equity_is_zero_sum(){
+        let pot=TerminalPot::for_terminal(TerminalId::BtnJamSbCallBbCall,8.0);
+        let ev=expected_three_active_payoff(&pot,[1.0/3.0;3]).unwrap();
+        assert!(ev.iter().sum::<f64>().abs()<1e-12);
+        for x in ev { assert!(x.abs()<1e-12); }
+    }
+
+    #[test]
+    fn three_way_certain_btn_winner_matches_settlement(){
+        let pot=TerminalPot::for_terminal(TerminalId::BtnJamSbCallBbCall,8.0);
+        let e=ThreeWayEquityEstimate{equities:[1.0,0.0,0.0],samples:1,seed:1};
+        assert_eq!(expected_threeway_payoff(&pot,e).unwrap(),pot.settle(&[Seat::Btn]));
     }
 }
