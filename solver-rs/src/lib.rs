@@ -1,6 +1,7 @@
 pub mod blockers;
 pub mod cards;
 pub mod equity;
+pub mod equity_cache;
 pub mod evaluator;
 pub mod joint;
 pub mod range;
