@@ -1,11 +1,6 @@
-name: 3Max Solver Convergence
+name: 3Max Solver Convergence [ARCHIVED]
 
 on:
-  pull_request:
-    paths:
-      - 'solver/**'
-      - 'tests/test_solver.py'
-      - '.github/workflows/solver-three-max-convergence.yml'
   workflow_dispatch:
 
 permissions:
