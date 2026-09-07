@@ -62,3 +62,6 @@ jobs:
       - name: Run persisted exact leaf equivalence smoke
         working-directory: solver-rs
         run: cargo run --release --bin persisted_leaf_smoke
+      - name: Run broader persisted restricted solver benchmark
+        working-directory: solver-rs
+        run: cargo run --release --bin restricted_persisted_broad_bench
