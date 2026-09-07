@@ -14,6 +14,7 @@ on:
       - 'solver-rs/src/solver_evidence.rs'
       - 'solver-rs/src/accuracy_policy.rs'
       - 'solver-rs/src/benchmark_claim.rs'
+      - 'solver-rs/src/independent_exact_eval.rs'
       - 'solver-rs/src/lib.rs'
       - '.github/workflows/phase-d-schema.yml'
   workflow_dispatch:
