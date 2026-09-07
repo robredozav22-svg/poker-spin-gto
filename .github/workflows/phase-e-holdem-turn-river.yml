@@ -1,0 +1,34 @@
+name: Phase E Holdem Turn River Validation
+
+on:
+  push:
+    branches: [chat-aligned-v2]
+    paths:
+      - 'solver-rs/src/holdem_turn_chance.rs'
+      - 'solver-rs/src/holdem_turn_river_cfr.rs'
+      - 'solver-rs/src/bin/holdem_turn_river_cfr_smoke.rs'
+      - 'solver-rs/src/evaluator.rs'
+      - 'solver-rs/src/cards.rs'
+      - 'solver-rs/src/lib.rs'
+      - '.github/workflows/phase-e-holdem-turn-river.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: phase-e-holdem-turn-river-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  turn-river:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run fast two-street structural tests
+        working-directory: solver-rs
+        run: cargo test --lib holdem_turn_river_cfr
+      - name: Run restricted two-street CFR smoke
+        working-directory: solver-rs
+        run: cargo run --release --bin holdem_turn_river_cfr_smoke
