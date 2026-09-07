@@ -35,3 +35,6 @@ jobs:
       - name: Run exact three-way terminal leaf smoke
         working-directory: solver-rs
         run: cargo run --release --bin exact_leaf3_smoke
+      - name: Run exact heads-up terminal leaf smoke
+        working-directory: solver-rs
+        run: cargo run --release --bin exact_leaf_hu_smoke
