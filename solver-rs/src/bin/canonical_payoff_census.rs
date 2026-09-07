@@ -27,9 +27,10 @@ fn main(){
         raw_hu,hu_unique,raw_hu as f64/hu_unique as f64,hu_seconds,raw_hu as f64/hu_seconds
     );
 
-    // 3-way throughput sample: first 32 hero combos, all legal ordered pairs of
-    // opponents. This is deliberately bounded; it is NOT a full 1326^3 census.
-    let hero_limit=32usize;
+    // Bounded 3-way throughput sample only. Four fixed hero combos already
+    // cover millions of legal ordered triples while keeping this CI diagnostic
+    // safely below the workflow timeout. This is NOT a full 1326^3 census.
+    let hero_limit=4usize;
     let start3=Instant::now();
     let mut raw3=0u64;
     let mut keys3=HashSet::new();
