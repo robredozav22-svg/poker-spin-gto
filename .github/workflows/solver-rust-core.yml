@@ -41,3 +41,6 @@ jobs:
       - name: Run sampled versus exact equity cross-check
         working-directory: solver-rs
         run: cargo run --release --bin exact_sampled_crosscheck
+      - name: Run analytical matrix-game convergence benchmark
+        working-directory: solver-rs
+        run: cargo run --release --bin synthetic_matrix_bench
