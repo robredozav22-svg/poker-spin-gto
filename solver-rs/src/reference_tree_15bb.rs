@@ -1,0 +1,130 @@
+use crate::preflop_tree::{
+    ActionEdge,Bb100,ContinuationContract,GameFormat,HistoryEvent,PayoutProfile,
+    PreflopAction,PreflopDecisionSpec,PreflopNodeKey,TreeEvidence,TreeVerification,
+};
+use crate::tree::Player;
+
+const STACK:Bb100=Bb100(1500);
+
+fn evidence(id:&str)->TreeEvidence{
+    TreeEvidence::new(TreeVerification::ScreenReference,id).expect("static reference evidence")
+}
+
+fn key(actor:Player,history:Vec<HistoryEvent>)->PreflopNodeKey{
+    PreflopNodeKey::new(
+        GameFormat::Spin3Max,
+        PayoutProfile::WinnerTakeAllChipEv,
+        STACK,
+        actor,
+        history,
+    ).expect("static 15bb reference key")
+}
+
+/// Screenshot reference only. Aggregate screenshot frequencies are stored in
+/// the UI/reference data layer; this module records action-tree structure only.
+pub fn btn_first_in()->PreflopDecisionSpec{
+    PreflopDecisionSpec::new(
+        key(Player::Btn,vec![]),
+        vec![
+            ActionEdge{action:PreflopAction::Fold,continuation:ContinuationContract::ChildDecision},
+            ActionEdge{action:PreflopAction::RaiseTo(Bb100(200)),continuation:ContinuationContract::ChildDecision},
+            ActionEdge{action:PreflopAction::JamTo(STACK),continuation:ContinuationContract::ChildDecision},
+        ],
+        evidence("SCREEN_REFERENCE_15BB_BTN_FIRST_IN"),
+    ).expect("valid BTN screenshot reference")
+}
+
+pub fn sb_vs_btn_raise_2()->PreflopDecisionSpec{
+    PreflopDecisionSpec::new(
+        key(Player::Sb,vec![
+            HistoryEvent{actor:Player::Btn,action:PreflopAction::RaiseTo(Bb100(200))},
+        ]),
+        vec![
+            // BB still has a decision after SB folds or calls.
+            ActionEdge{action:PreflopAction::Fold,continuation:ContinuationContract::ChildDecision},
+            ActionEdge{action:PreflopAction::CallTo(Bb100(200)),continuation:ContinuationContract::ChildDecision},
+            ActionEdge{action:PreflopAction::JamTo(STACK),continuation:ContinuationContract::ChildDecision},
+        ],
+        evidence("SCREEN_REFERENCE_15BB_SB_VS_BTN_RAISE_2"),
+    ).expect("valid SB screenshot reference")
+}
+
+pub fn bb_vs_btn_raise_2_sb_call()->PreflopDecisionSpec{
+    PreflopDecisionSpec::new(
+        key(Player::Bb,vec![
+            HistoryEvent{actor:Player::Btn,action:PreflopAction::RaiseTo(Bb100(200))},
+            HistoryEvent{actor:Player::Sb,action:PreflopAction::CallTo(Bb100(200))},
+        ]),
+        vec![
+            // Folding BB leaves BTN/SB with chips behind -> measured postflop EV.
+            ActionEdge{action:PreflopAction::Fold,continuation:ContinuationContract::RequiresPostflopEv},
+            // Calling closes preflop three-way with chips behind.
+            ActionEdge{action:PreflopAction::CallTo(Bb100(200)),continuation:ContinuationContract::RequiresPostflopEv},
+            // A BB jam leads to BTN/SB response decisions before terminal payoff.
+            ActionEdge{action:PreflopAction::JamTo(STACK),continuation:ContinuationContract::ChildDecision},
+        ],
+        evidence("SCREEN_REFERENCE_15BB_BB_VS_BTN_RAISE_2_SB_CALL"),
+    ).expect("valid BB multiway screenshot reference")
+}
+
+pub fn bb_vs_btn_fold_sb_raise_3()->PreflopDecisionSpec{
+    PreflopDecisionSpec::new(
+        key(Player::Bb,vec![
+            HistoryEvent{actor:Player::Btn,action:PreflopAction::Fold},
+            HistoryEvent{actor:Player::Sb,action:PreflopAction::RaiseTo(Bb100(300))},
+        ]),
+        vec![
+            // BTN is out; BB fold ends the hand immediately.
+            ActionEdge{action:PreflopAction::Fold,continuation:ContinuationContract::ExactFoldSettlement},
+            // BB call creates a heads-up postflop continuation with chips behind.
+            ActionEdge{action:PreflopAction::CallTo(Bb100(300)),continuation:ContinuationContract::RequiresPostflopEv},
+            // BB jam creates an SB response decision.
+            ActionEdge{action:PreflopAction::JamTo(STACK),continuation:ContinuationContract::ChildDecision},
+        ],
+        evidence("SCREEN_REFERENCE_15BB_BB_VS_BTN_FOLD_SB_RAISE_3"),
+    ).expect("valid BB vs SB screenshot reference")
+}
+
+pub fn all_reference_specs()->Vec<PreflopDecisionSpec>{
+    vec![
+        btn_first_in(),
+        sb_vs_btn_raise_2(),
+        bb_vs_btn_raise_2_sb_call(),
+        bb_vs_btn_fold_sb_raise_3(),
+    ]
+}
+
+#[cfg(test)]
+mod tests{
+    use super::*;
+
+    #[test]
+    fn every_reference_node_is_screen_reference_not_exact(){
+        for spec in all_reference_specs(){
+            assert_eq!(spec.evidence.verification,TreeVerification::ScreenReference);
+        }
+    }
+
+    #[test]
+    fn screenshot_nodes_have_distinct_full_histories(){
+        let multiway=bb_vs_btn_raise_2_sb_call();
+        let sb_only=bb_vs_btn_fold_sb_raise_3();
+        assert_ne!(multiway.key,sb_only.key);
+        assert_eq!(multiway.key.history[0].action,PreflopAction::RaiseTo(Bb100(200)));
+        assert_eq!(sb_only.key.history[1].action,PreflopAction::RaiseTo(Bb100(300)));
+    }
+
+    #[test]
+    fn nonallin_closed_paths_require_postflop_ev(){
+        let spec=bb_vs_btn_raise_2_sb_call();
+        assert_eq!(spec.edges[0].continuation,ContinuationContract::RequiresPostflopEv);
+        assert_eq!(spec.edges[1].continuation,ContinuationContract::RequiresPostflopEv);
+        assert_eq!(spec.edges[2].continuation,ContinuationContract::ChildDecision);
+    }
+
+    #[test]
+    fn btn_fold_sb_raise_bb_fold_is_exact_fold_settlement(){
+        let spec=bb_vs_btn_fold_sb_raise_3();
+        assert_eq!(spec.edges[0].continuation,ContinuationContract::ExactFoldSettlement);
+    }
+}
