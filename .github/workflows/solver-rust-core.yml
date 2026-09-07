@@ -26,3 +26,6 @@ jobs:
       - name: Run one exact HU equity enumeration
         working-directory: solver-rs
         run: cargo run --release --bin exact_equity_smoke
+      - name: Run exact-payoff restricted convergence benchmark
+        working-directory: solver-rs
+        run: cargo run --release --bin restricted_exact_bench
