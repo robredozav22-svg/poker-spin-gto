@@ -1,19 +1,6 @@
-name: 3Max Solver Smoke
+name: 3Max Solver Smoke [ARCHIVED]
 
 on:
-  push:
-    branches: [chat-aligned-v2]
-    paths:
-      - 'solver/**'
-      - 'tests/test_solver.py'
-      - 'data/source-verified-anchors.json'
-      - '.github/workflows/solver-three-max-smoke.yml'
-  pull_request:
-    paths:
-      - 'solver/**'
-      - 'tests/test_solver.py'
-      - 'data/source-verified-anchors.json'
-      - '.github/workflows/solver-three-max-smoke.yml'
   workflow_dispatch:
 
 permissions:
