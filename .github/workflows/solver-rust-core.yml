@@ -53,3 +53,6 @@ jobs:
       - name: Run compute-missing payoff build smoke
         working-directory: solver-rs
         run: cargo run --release --bin payoff_build_smoke
+      - name: Run payoff manifest integrity smoke
+        working-directory: solver-rs
+        run: cargo run --release --bin payoff_manifest_smoke
