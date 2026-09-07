@@ -1,0 +1,27 @@
+name: Phase E Leduc Validation
+
+on:
+  push:
+    branches: [chat-aligned-v2]
+    paths:
+      - 'solver-rs/src/leduc_cfr.rs'
+      - 'solver-rs/src/bin/leduc_cfr_smoke.rs'
+      - 'solver-rs/src/lib.rs'
+      - '.github/workflows/phase-e-leduc.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  leduc:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Leduc unit tests
+        working-directory: solver-rs
+        run: cargo test --lib leduc_cfr
+      - name: Run Leduc sequence-form value smoke
+        working-directory: solver-rs
+        run: cargo run --release --bin leduc_cfr_smoke
