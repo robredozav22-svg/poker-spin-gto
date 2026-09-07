@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
 use crate::cards::COMBO_COUNT;
+use crate::continuation_registry::ContinuationRegistry;
 use crate::preflop_tree::{PreflopAction,PreflopNodeKey,TreeVerification};
 use crate::tree_catalog::{CatalogCompleteness,TreeCatalog};
 
@@ -22,6 +23,7 @@ pub struct StrategyRecord{
 impl StrategyRecord{
     pub fn new(
         catalog:&TreeCatalog,
+        continuations:Option<&ContinuationRegistry>,
         node:PreflopNodeKey,
         verification:StrategyVerification,
         source_id:impl Into<String>,
@@ -38,6 +40,8 @@ impl StrategyRecord{
         if verification==StrategyVerification::VerifiedExact{
             if catalog.profile.verification!=TreeVerification::VerifiedExactTree{return Err("VERIFIED_EXACT strategy requires VERIFIED_EXACT tree profile".into());}
             if catalog.completeness!=CatalogCompleteness::Complete{return Err("VERIFIED_EXACT strategy requires Complete tree catalog".into());}
+            let registry=continuations.ok_or_else(||"VERIFIED_EXACT strategy requires continuation registry".to_string())?;
+            registry.validate_exact_coverage(catalog)?;
             if combos.len()!=COMBO_COUNT{return Err(format!("VERIFIED_EXACT strategy requires all {COMBO_COUNT} physical combos"));}
         }
 
@@ -69,6 +73,7 @@ fn validate_combo_rows(rows:&[ComboActionFrequency],legal_actions:&HashSet<Prefl
 #[cfg(test)]
 mod tests{
     use super::*;
+    use crate::continuation_registry::ContinuationRegistry;
     use crate::preflop_tree::{ActionEdge,Bb100,GameFormat,PayoutProfile,PreflopDecisionSpec,TreeEvidence};
     use crate::tree::Player;
     use crate::tree_catalog::{CatalogCompleteness,TreeCatalog};
@@ -79,7 +84,7 @@ mod tests{
         let profile=screen_reference_spins_15bb_v1();
         let catalog=TreeCatalog::new(profile,CatalogCompleteness::PartialReference,crate::reference_tree_15bb::all_reference_specs()).unwrap();
         let node=crate::reference_tree_15bb::btn_first_in().key;
-        let err=StrategyRecord::new(&catalog,node,StrategyVerification::VerifiedExact,"screen","none",vec![]).unwrap_err();
+        let err=StrategyRecord::new(&catalog,None,node,StrategyVerification::VerifiedExact,"screen","none",vec![]).unwrap_err();
         assert!(err.contains("requires VERIFIED_EXACT tree profile"));
     }
 
@@ -88,7 +93,7 @@ mod tests{
         let profile=screen_reference_spins_15bb_v1();
         let catalog=TreeCatalog::new(profile,CatalogCompleteness::PartialReference,crate::reference_tree_15bb::all_reference_specs()).unwrap();
         let node=crate::reference_tree_15bb::btn_first_in().key;
-        let r=StrategyRecord::new(&catalog,node,StrategyVerification::MissingExact,"screen","none",vec![]).unwrap();
+        let r=StrategyRecord::new(&catalog,None,node,StrategyVerification::MissingExact,"screen","none",vec![]).unwrap();
         assert!(r.combos.is_empty());
     }
 
@@ -98,7 +103,7 @@ mod tests{
         let catalog=TreeCatalog::new(profile,CatalogCompleteness::PartialReference,crate::reference_tree_15bb::all_reference_specs()).unwrap();
         let node=crate::reference_tree_15bb::btn_first_in().key;
         let bad=ComboActionFrequency{combo_index:0,frequencies:vec![(PreflopAction::Fold,0.7),(PreflopAction::RaiseTo(Bb100(200)),0.4)]};
-        assert!(StrategyRecord::new(&catalog,node,StrategyVerification::Partial,"fixture","fixture",vec![bad]).is_err());
+        assert!(StrategyRecord::new(&catalog,None,node,StrategyVerification::Partial,"fixture","fixture",vec![bad]).is_err());
     }
 
     #[test]
@@ -107,12 +112,11 @@ mod tests{
         let catalog=TreeCatalog::new(profile,CatalogCompleteness::PartialReference,crate::reference_tree_15bb::all_reference_specs()).unwrap();
         let node=crate::reference_tree_15bb::btn_first_in().key;
         let bad=ComboActionFrequency{combo_index:0,frequencies:vec![(PreflopAction::CallTo(Bb100(200)),1.0)]};
-        let err=StrategyRecord::new(&catalog,node,StrategyVerification::Partial,"fixture","fixture",vec![bad]).unwrap_err();
+        let err=StrategyRecord::new(&catalog,None,node,StrategyVerification::Partial,"fixture","fixture",vec![bad]).unwrap_err();
         assert!(err.contains("not legal at this node"));
     }
 
-    #[test]
-    fn exact_requires_all_1326_physical_combos(){
+    fn exact_pushfold_catalog()->(TreeCatalog,PreflopNodeKey){
         let profile=TreeProfileSpec::new(
             "exact-fixture",TreeFamily::InternalResearch,GameFormat::SpinHeadsUp,PayoutProfile::WinnerTakeAllChipEv,
             TreeVerification::VerifiedExactTree,"fixture",vec![SizingFamily::Jam],"",
@@ -127,9 +131,22 @@ mod tests{
             child,vec![ActionEdge::terminal(PreflopAction::Fold,crate::preflop_tree::ContinuationContract::ExactFoldSettlement),ActionEdge::terminal(PreflopAction::CallTo(Bb100(800)),crate::preflop_tree::ContinuationContract::ExactAllInShowdown)],
             TreeEvidence::new(TreeVerification::VerifiedExactTree,"fixture").unwrap(),
         ).unwrap();
-        let catalog=TreeCatalog::new(profile,CatalogCompleteness::Complete,vec![root_spec,child_spec]).unwrap();
+        (TreeCatalog::new(profile,CatalogCompleteness::Complete,vec![root_spec,child_spec]).unwrap(),root)
+    }
+
+    #[test]
+    fn exact_requires_continuation_registry_even_when_no_postflop_edges(){
+        let (catalog,root)=exact_pushfold_catalog();
+        let err=StrategyRecord::new(&catalog,None,root,StrategyVerification::VerifiedExact,"fixture","solver",vec![]).unwrap_err();
+        assert!(err.contains("requires continuation registry"));
+    }
+
+    #[test]
+    fn exact_requires_all_1326_physical_combos_after_coverage_gate(){
+        let (catalog,root)=exact_pushfold_catalog();
+        let registry=ContinuationRegistry::new(vec![]).unwrap();
         let one=ComboActionFrequency{combo_index:0,frequencies:vec![(PreflopAction::Fold,0.5),(PreflopAction::JamTo(Bb100(800)),0.5)]};
-        let err=StrategyRecord::new(&catalog,root,StrategyVerification::VerifiedExact,"fixture","solver",vec![one]).unwrap_err();
+        let err=StrategyRecord::new(&catalog,Some(&registry),root,StrategyVerification::VerifiedExact,"fixture","solver",vec![one]).unwrap_err();
         assert!(err.contains("all 1326 physical combos"));
     }
 }
