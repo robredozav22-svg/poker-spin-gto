@@ -21,15 +21,34 @@
     return entry;
   }
 
+  function validateExternalCrosscheck(key,x){
+    if(typeof x.provider!=='string'||!x.provider.trim())throw new Error(`external crosscheck provider missing for ${key}`);
+    if(x.compatibility_resolved!==true||x.same_tree_profile!==true)throw new Error(`external crosscheck profile unresolved for ${key}`);
+    if(x.source_usage_compliant!==true)throw new Error(`external crosscheck source usage not compliant for ${key}`);
+    if(!['ROUNDING_ONLY','SOLVER_TOLERANCE','NONE'].includes(x.classification))throw new Error(`runtime external crosscheck classification not promotable for ${key}`);
+    if(typeof x.captured_at!=='string'||!x.captured_at.trim())throw new Error(`external crosscheck captured_at missing for ${key}`);
+  }
+
+  function validateInternalCrosscheck(key,x){
+    if(x.same_tree_profile!==true)throw new Error(`internal solver proof profile mismatch for ${key}`);
+    if(x.independent_evaluator!==true||x.independent_best_response!==true)throw new Error(`internal solver proof is not independently evaluated for ${key}`);
+    if(x.precommitted_threshold_pass!==true)throw new Error(`internal solver proof threshold not passed for ${key}`);
+    if(typeof x.evidence_path!=='string'||!x.evidence_path.startsWith('data/solver-evidence/')||!x.evidence_path.endsWith('.json'))throw new Error(`internal solver evidence path invalid for ${key}`);
+    if(typeof x.evidence_sha256!=='string'||!/^sha256:[0-9a-f]{64}$/.test(x.evidence_sha256))throw new Error(`internal solver evidence checksum invalid for ${key}`);
+    if(!['SOLVER_TOLERANCE','NONE'].includes(x.classification))throw new Error(`runtime internal solver classification not promotable for ${key}`);
+  }
+
   function validatePromotionProof(key,entry,p){
     if(!p||typeof p!=='object')throw new Error(`missing promotion proof for ${key}`);
     if(p.status!=='PROMOTED_2026_EXACT')throw new Error(`runtime refused unpromoted exact node ${key}`);
     if(p.artifact_id!==entry.artifact_id||p.path!==entry.path||p.sha256!==entry.sha256||p.captured_at!==entry.captured_at)throw new Error(`promotion/index provenance mismatch for ${key}`);
     const c=p.checks||{};
-    for(const name of ['live_2026_source','exact_node_schema','upi_action_conservation','zero_reach_guard','suit_symmetry','aggregate_recompute','canonical_route','artifact_sha256'])if(c[name]!=='PASS')throw new Error(`promotion check ${name} not PASS for ${key}`);
+    for(const name of ['live_2026_source','exact_node_schema','upi_action_conservation','zero_reach_guard','suit_symmetry','aggregate_recompute','canonical_route','artifact_sha256','source_usage_compliance'])if(c[name]!=='PASS')throw new Error(`promotion check ${name} not PASS for ${key}`);
     if(c.independent_crosscheck!=='PASS_COMPATIBLE'||c.unexplained_numeric_disagreement!==false)throw new Error(`independent promotion cross-check not passed for ${key}`);
     const x=p.crosscheck||{};
-    if(x.compatibility_resolved!==true||!['ROUNDING_ONLY','SOLVER_TOLERANCE','NONE'].includes(x.classification))throw new Error(`runtime cross-check classification not promotable for ${key}`);
+    if(x.type==='COMPATIBLE_EXTERNAL_SOURCE')validateExternalCrosscheck(key,x);
+    else if(x.type==='INDEPENDENT_INTERNAL_SOLVER_PROOF')validateInternalCrosscheck(key,x);
+    else throw new Error(`unsupported promotion crosscheck type for ${key}: ${x.type}`);
     return p;
   }
 
