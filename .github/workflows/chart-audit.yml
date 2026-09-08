@@ -10,11 +10,13 @@ on:
       - 'ui/**'
       - 'app.js'
       - 'scripts/validate-chart-data.mjs'
+      - 'scripts/validate-source-policy-2026.mjs'
       - 'scripts/validate-exact-spin-nodes.mjs'
       - 'scripts/validate-exact-index.cjs'
       - 'scripts/validate-exact-promotion.cjs'
       - 'scripts/validate-crosscheck-profiles.mjs'
       - 'scripts/build-exact-index-entry.cjs'
+      - 'scripts/build-promotion-candidate.cjs'
       - 'scripts/import-gtowizard-upi-node.mjs'
       - 'scripts/test-gtowizard-upi-zero-reach.mjs'
       - 'scripts/test-exact-promotion-pipeline.mjs'
@@ -41,6 +43,8 @@ jobs:
           node-version: '22'
       - name: Validate chart data
         run: node scripts/validate-chart-data.mjs
+      - name: Validate 2026 source policy invariants
+        run: node scripts/validate-source-policy-2026.mjs
       - name: Validate 2026 cross-check provenance and source usage
         run: node scripts/validate-crosscheck-profiles.mjs
       - name: Self-test GTO Wizard exact importer
