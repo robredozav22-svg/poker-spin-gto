@@ -2,6 +2,7 @@
   "schema_version": "chart-coverage-targets-v1",
   "format": "SPIN_3MAX",
   "payout_profile": "WTA_CHIPEV_BASELINE",
+  "ante_profile": "NONE",
   "ui_effective_stacks_bb": [2,4,6,8,10,12,15,17,20,23,25],
   "no_interpolation": true,
   "priority_order": [
