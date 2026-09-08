@@ -55,24 +55,40 @@ function validateNode(doc,file){
   for(let i=0;i<(doc.actions??[]).length;i++){const a=doc.actions[i];validateAction(a,`${ctx}:actions[${i}]`);if(a?.id){if(actionIds.has(a.id))fail(`${ctx}: duplicate action id ${a.id}`);actionIds.add(a.id);}}
   if(!doc.hands||typeof doc.hands!=='object'||Array.isArray(doc.hands))return fail(`${ctx}: hands object missing`);
   const keys=Object.keys(doc.hands);
-  if(keys.length!==169)fail(`${ctx}: expected exactly 169 hands, got ${keys.length}`);
+  if(keys.length!==169)fail(`${ctx}: expected exactly 169 hand classes, got ${keys.length}`);
   for(const h of keys)if(!HAND_SET.has(h))fail(`${ctx}: unknown hand ${h}`);
-  for(const h of HANDS)if(!(h in doc.hands))fail(`${ctx}: missing hand ${h}; no default fold is allowed`);
+  for(const h of HANDS)if(!(h in doc.hands))fail(`${ctx}: missing hand ${h}; no default action is allowed`);
 
-  const aggregate={};for(const id of actionIds)aggregate[id]=0;
+  const aggregateMass={};for(const id of actionIds)aggregateMass[id]=0;
+  let totalReachCombos=0;
   for(const h of HANDS){
     const cell=doc.hands[h];
     if(!cell||typeof cell!=='object'||Array.isArray(cell)){fail(`${ctx}:${h} cell must be object`);continue;}
-    const entries=Object.entries(cell);
-    if(!entries.length){fail(`${ctx}:${h} empty cell`);continue;}
+    const rw=cell.range_weight;
+    if(!finite(rw)||rw<0||rw>1){fail(`${ctx}:${h} range_weight must be in [0,1]`);continue;}
+    const strategy=cell.strategy;
+    if(rw<=1e-12){
+      if(strategy!==null)fail(`${ctx}:${h} zero-reach hand must use strategy:null, never an invented fold/action`);
+      continue;
+    }
+    totalReachCombos+=rw*combos(h);
+    if(!strategy||typeof strategy!=='object'||Array.isArray(strategy)){fail(`${ctx}:${h} reachable hand requires strategy object`);continue;}
+    const entries=Object.entries(strategy);
+    if(!entries.length){fail(`${ctx}:${h} reachable hand has empty strategy`);continue;}
     let sum=0;
-    for(const [id,p] of entries){if(!actionIds.has(id)){fail(`${ctx}:${h} undeclared action ${id}`);continue;}if(!finite(p)||p<0||p>1){fail(`${ctx}:${h} invalid probability ${id}=${p}`);continue;}sum+=p;aggregate[id]+=p*combos(h);}
-    if(Math.abs(sum-1)>1e-9)fail(`${ctx}:${h} probabilities sum ${sum}, expected 1`);
+    for(const [id,p] of entries){
+      if(!actionIds.has(id)){fail(`${ctx}:${h} undeclared action ${id}`);continue;}
+      if(!finite(p)||p<0||p>1){fail(`${ctx}:${h} invalid probability ${id}=${p}`);continue;}
+      sum+=p;aggregateMass[id]+=p*rw*combos(h);
+    }
+    if(Math.abs(sum-1)>1e-9)fail(`${ctx}:${h} strategy probabilities sum ${sum}, expected 1`);
   }
-  for(const id of Object.keys(aggregate))aggregate[id]/=1326;
+  if(totalReachCombos<=1e-12)fail(`${ctx}: node has zero reachable combo mass`);
+  const aggregate={};for(const id of actionIds)aggregate[id]=aggregateMass[id]/totalReachCombos;
+  if(doc.reach_combos!==undefined&&(!finite(doc.reach_combos)||Math.abs(doc.reach_combos-totalReachCombos)>1e-8))fail(`${ctx}: reach_combos=${doc.reach_combos} disagrees with matrix ${totalReachCombos}`);
   if(doc.aggregate!==undefined){
     if(!doc.aggregate||typeof doc.aggregate!=='object'||Array.isArray(doc.aggregate))fail(`${ctx}: aggregate must be object`);else{
-      for(const id of actionIds){if(!finite(doc.aggregate[id]))fail(`${ctx}: aggregate missing ${id}`);else if(Math.abs(doc.aggregate[id]-aggregate[id])>1e-8)fail(`${ctx}: aggregate ${id}=${doc.aggregate[id]} disagrees with matrix ${aggregate[id]}`);}
+      for(const id of actionIds){if(!finite(doc.aggregate[id]))fail(`${ctx}: aggregate missing ${id}`);else if(Math.abs(doc.aggregate[id]-aggregate[id])>1e-8)fail(`${ctx}: aggregate ${id}=${doc.aggregate[id]} disagrees with reach-weighted matrix ${aggregate[id]}`);}
       for(const id of Object.keys(doc.aggregate))if(!actionIds.has(id))fail(`${ctx}: aggregate contains undeclared action ${id}`);
     }
   }
@@ -81,4 +97,4 @@ function validateNode(doc,file){
 const files=filesRecursive(exactDir);
 for(const file of files){try{validateNode(JSON.parse(fs.readFileSync(file,'utf8')),file);}catch(e){fail(`${path.relative(root,file)}: invalid JSON (${e.message})`);}}
 if(errors.length){for(const e of errors)console.error(`ERROR: ${e}`);console.error(`Exact Spin node validation FAILED: ${errors.length} error(s).`);process.exit(1);}
-console.log(`Exact Spin node validation PASS: ${files.length} exact node file(s); strict 169-hand/no-default/interpolation guard active.`);
+console.log(`Exact Spin node validation PASS: ${files.length} exact node file(s); 169 classes + explicit zero-reach/no-default/interpolation guard active.`);
