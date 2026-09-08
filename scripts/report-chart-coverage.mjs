@@ -11,9 +11,12 @@ const crossDir=path.join(root,'data','crosschecks','2026');
 const crossFiles=fs.existsSync(crossDir)?fs.readdirSync(crossDir).filter(x=>x.endsWith('.json')):[];
 const crossStacks=new Set(crossFiles.map(f=>JSON.parse(fs.readFileSync(path.join(crossDir,f),'utf8')).effective_stack_bb));
 const exactKeys=Object.keys(exactIndex.nodes??{});
+const runtimeMode=targets.format==='SPIN_HU'?'HU':'3MAX';
+const runtimeProfile=targets.payout_profile;
 
 const rows=targets.opening_nodes.map(t=>{
-  const exactForStack=exactKeys.filter(k=>k.startsWith(`SPIN_3MAX|${t.stack_bb}|`));
+  const prefix=`${runtimeMode}/${runtimeProfile}/${Number(t.stack_bb)}/`;
+  const exactForStack=exactKeys.filter(k=>k.startsWith(prefix));
   return {
     stack_bb:t.stack_bb,
     positions:t.positions,
@@ -26,6 +29,8 @@ const rows=targets.opening_nodes.map(t=>{
 
 const summary={
   schema_version:'chart-coverage-report-v1',
+  format:targets.format,
+  payout_profile:targets.payout_profile,
   exact_runtime_nodes_total:exactKeys.length,
   stacks_with_current_2026_crosscheck:[...crossStacks].sort((a,b)=>a-b),
   stacks_without_current_2026_crosscheck:targets.ui_effective_stacks_bb.filter(s=>!crossStacks.has(s)),
