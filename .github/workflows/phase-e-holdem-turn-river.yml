@@ -7,6 +7,7 @@ on:
       - 'solver-rs/src/holdem_turn_chance.rs'
       - 'solver-rs/src/holdem_turn_river_cfr.rs'
       - 'solver-rs/src/holdem_turn_river_br.rs'
+      - 'solver-rs/src/continuation_registry.rs'
       - 'solver-rs/src/bin/holdem_turn_river_cfr_smoke.rs'
       - 'solver-rs/src/evaluator.rs'
       - 'solver-rs/src/cards.rs'
@@ -24,12 +25,12 @@ permissions:
 jobs:
   turn-river:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - name: Run fast two-street structural and BR tests
+      - name: Run fast two-street structural, BR, and continuation-proof tests
         working-directory: solver-rs
-        run: cargo test --lib holdem_turn_river
-      - name: Run restricted two-street CFR smoke
+        run: cargo test --lib holdem_turn_river continuation_registry
+      - name: Run strict 1.6M vanilla CFR promotion gate
         working-directory: solver-rs
         run: cargo run --release --bin holdem_turn_river_cfr_smoke
