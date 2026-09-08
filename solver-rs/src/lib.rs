@@ -52,6 +52,7 @@ pub mod terminal_ev;
 pub mod tree;
 pub mod tree_catalog;
 pub mod tree_profile;
+pub mod turn_river_strategy_checksum;
 
 pub const HAND_CLASSES:usize=169;
 
