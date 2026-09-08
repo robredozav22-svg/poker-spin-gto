@@ -3,33 +3,20 @@
   "id": "spin3max-15bb-btn-first-in",
   "format": "SPIN_3MAX",
   "payout_profile": "WTA_CHIPEV_BASELINE",
+  "ante_profile": "NONE",
   "effective_stack_bb": 15,
   "hero_position": "BTN",
   "history": [],
   "source": {
     "provider": "GTO Wizard",
-    "solution_family": "REPLACE_WITH_EXACT_SOLUTION_FAMILY",
+    "solution_family": "REPLACE_WITH_EXACT_CURRENT_SOLUTION_FAMILY",
     "node_id": "REPLACE_WITH_EXACT_NODE_ID_OR_PATH",
-    "captured_at": "REPLACE_WITH_ISO_TIMESTAMP"
+    "captured_at": "REPLACE_WITH_2026_ISO_TIMESTAMP"
   },
   "full_range_upi": "PASTE_FULL_NODE_RANGE_HERE",
   "actions": [
-    {
-      "id": "FOLD",
-      "type": "FOLD",
-      "range_upi": "PASTE_FOLD_ACTION_RANGE_HERE"
-    },
-    {
-      "id": "RAISE_TO_2BB",
-      "type": "RAISE",
-      "to_bb": 2,
-      "range_upi": "PASTE_RAISE_2BB_ACTION_RANGE_HERE"
-    },
-    {
-      "id": "JAM_TO_15BB",
-      "type": "JAM",
-      "to_bb": 15,
-      "range_upi": "PASTE_JAM_ACTION_RANGE_HERE"
-    }
+    {"id": "FOLD", "type": "FOLD", "range_upi": "PASTE_FOLD_ACTION_RANGE_HERE"},
+    {"id": "RAISE_TO_2BB", "type": "RAISE", "to_bb": 2, "range_upi": "PASTE_RAISE_2BB_ACTION_RANGE_HERE"},
+    {"id": "JAM_TO_15BB", "type": "JAM", "to_bb": 15, "range_upi": "PASTE_JAM_ACTION_RANGE_HERE"}
   ]
 }
