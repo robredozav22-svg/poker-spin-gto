@@ -9,6 +9,7 @@ on:
       - 'tests/**'
       - 'scripts/validate-chart-data.mjs'
       - 'scripts/validate-exact-spin-nodes.mjs'
+      - 'scripts/import-gtowizard-upi-node.mjs'
       - 'scripts/validate-benchmark-manifest.mjs'
       - '.github/workflows/chart-audit.yml'
   workflow_dispatch:
@@ -29,6 +30,8 @@ jobs:
           node-version: '22'
       - name: Validate chart data
         run: node scripts/validate-chart-data.mjs
+      - name: Self-test GTO Wizard exact importer
+        run: node scripts/import-gtowizard-upi-node.mjs --self-test
       - name: Validate exact Spin nodes
         run: node scripts/validate-exact-spin-nodes.mjs
       - name: Validate benchmark manifests
