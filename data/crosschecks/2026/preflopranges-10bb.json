@@ -1,0 +1,14 @@
+{
+  "schema_version": "spin-crosscheck-profile-v1",
+  "captured_at": "2026-09-08T07:23:00Z",
+  "source": {"provider":"PreflopRanges.app","role":"INDEPENDENT_SOLVER_CROSSCHECK","urls":["https://preflopranges.app/charts/spins/10bb","https://preflopranges.app/charts/spins/btn-open-10bb","https://preflopranges.app/charts/spins/sb-open-10bb"]},
+  "format": "SPIN_3MAX",
+  "effective_stack_bb": 10,
+  "payout_profile": "UNRESOLVED_PUBLIC_SOURCE",
+  "ante_profile": "UNRESOLVED_PUBLIC_SOURCE",
+  "nodes": [
+    {"id":"preflopranges-10bb-btn-first-in","hero_position":"BTN","history":[],"actions":[{"id":"FOLD","type":"FOLD"},{"id":"RAISE_TO_2BB","type":"RAISE","to_bb":2},{"id":"JAM_TO_10BB","type":"JAM","to_bb":10}],"aggregate":{"FOLD":0.659,"RAISE_TO_2BB":0.075,"JAM_TO_10BB":0.266}},
+    {"id":"preflopranges-10bb-sb-first-in","hero_position":"SB","history":[{"actor":"BTN","type":"FOLD"}],"actions":[{"id":"FOLD","type":"FOLD"},{"id":"RAISE_TO_2BB","type":"RAISE","to_bb":2},{"id":"LIMP","type":"LIMP"},{"id":"JAM_TO_10BB","type":"JAM","to_bb":10}],"aggregate":{"FOLD":0.41,"RAISE_TO_2BB":0.165,"LIMP":0.008,"JAM_TO_10BB":0.417}}
+  ],
+  "promotion_use":"CROSSCHECK_ONLY"
+}
