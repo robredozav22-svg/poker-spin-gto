@@ -1,0 +1,140 @@
+{
+  "schema_version": "exact-node-registry-v1",
+  "format": "SPIN_3MAX",
+  "payout_profile": "WTA_CHIPEV_BASELINE",
+  "effective_stack_bb": 15,
+  "policy": {
+    "primary_source": "GTO Wizard Spin & Go",
+    "allow_interpolation": false,
+    "allow_screenshot_reconstruction": false,
+    "allow_default_fold": false,
+    "require_169_hand_matrix": true,
+    "require_exact_action_sizing": true,
+    "require_source_node_identity": true
+  },
+  "nodes": [
+    {
+      "family": "BTN_first_in",
+      "hero_position": "BTN",
+      "history": [],
+      "status": "MISSING_EXACT",
+      "source_node_id": null,
+      "sizing_status": "UNRESOLVED_FROM_PRIMARY_SOURCE",
+      "screen_crosscheck": {"FOLD": 0.6722, "RAISE_TO_2BB": 0.2541, "JAM_TO_15BB": 0.0736}
+    },
+    {
+      "family": "SB_first_in_after_BTN_fold",
+      "hero_position": "SB",
+      "history": [{"actor": "BTN", "type": "FOLD"}],
+      "status": "PRIMARY_SOURCE_VISUAL_ONLY",
+      "source_node_id": "GTO_WIZARD_PUBLIC_ARTICLE_SB_3WAY_15BB_NO_LIMP",
+      "sizing_status": "PUBLIC_ARTICLE_CONFIRMS_NODE_BUT_MATRIX_IS_IMAGE_ONLY",
+      "note": "GTO Wizard public article explicitly labels this equilibrium node as SB 3-way, 15bb effective, no limp. Exact 169-hand frequencies are not machine-readable in the public article."
+    },
+    {
+      "family": "SB_vs_BTN_raise",
+      "hero_position": "SB",
+      "history": [{"actor": "BTN", "type": "RAISE", "to_bb": 2}],
+      "status": "MISSING_EXACT",
+      "source_node_id": null,
+      "screen_crosscheck": {"FOLD": 0.7831, "CALL": 0.0241, "JAM_TO_15BB": 0.1927}
+    },
+    {
+      "family": "SB_vs_BTN_jam",
+      "hero_position": "SB",
+      "history": [{"actor": "BTN", "type": "JAM", "to_bb": 15}],
+      "status": "MISSING_EXACT",
+      "source_node_id": null
+    },
+    {
+      "family": "BB_vs_BTN_raise_after_SB_fold",
+      "hero_position": "BB",
+      "history": [{"actor": "BTN", "type": "RAISE", "to_bb": 2}, {"actor": "SB", "type": "FOLD"}],
+      "status": "MISSING_EXACT",
+      "source_node_id": null
+    },
+    {
+      "family": "BB_vs_BTN_raise_after_SB_call",
+      "hero_position": "BB",
+      "history": [{"actor": "BTN", "type": "RAISE", "to_bb": 2}, {"actor": "SB", "type": "CALL"}],
+      "status": "MISSING_EXACT",
+      "source_node_id": null,
+      "screen_crosscheck": {"FOLD": 0.5911, "CALL": 0.2219, "JAM_TO_15BB": 0.1870}
+    },
+    {
+      "family": "BB_vs_BTN_jam_after_SB_fold",
+      "hero_position": "BB",
+      "history": [{"actor": "BTN", "type": "JAM", "to_bb": 15}, {"actor": "SB", "type": "FOLD"}],
+      "status": "MISSING_EXACT",
+      "source_node_id": null
+    },
+    {
+      "family": "BB_vs_SB_raise_after_BTN_fold",
+      "hero_position": "BB",
+      "history": [{"actor": "BTN", "type": "FOLD"}, {"actor": "SB", "type": "RAISE", "to_bb": 3}],
+      "status": "MISSING_EXACT",
+      "source_node_id": null,
+      "screen_crosscheck": {"FOLD": 0.4712, "CALL": 0.3385, "JAM_TO_15BB": 0.1901}
+    },
+    {
+      "family": "BB_vs_SB_limp_after_BTN_fold",
+      "hero_position": "BB",
+      "history": [{"actor": "BTN", "type": "FOLD"}, {"actor": "SB", "type": "LIMP"}],
+      "status": "MISSING_EXACT",
+      "source_node_id": null,
+      "sizing_status": "REQUIRED_ONLY_IF_SELECTED_PRIMARY_TREE_CONTAINS_LIMP"
+    },
+    {
+      "family": "BB_vs_SB_jam_after_BTN_fold",
+      "hero_position": "BB",
+      "history": [{"actor": "BTN", "type": "FOLD"}, {"actor": "SB", "type": "JAM", "to_bb": 15}],
+      "status": "MISSING_EXACT",
+      "source_node_id": null
+    },
+    {
+      "family": "BTN_response_to_SB_3bet",
+      "hero_position": "BTN",
+      "history": [{"actor": "BTN", "type": "RAISE", "to_bb": 2}, {"actor": "SB", "type": "RAISE", "to_bb": null}],
+      "status": "MISSING_EXACT",
+      "source_node_id": null,
+      "sizing_status": "UNRESOLVED_FROM_PRIMARY_SOURCE"
+    },
+    {
+      "family": "BTN_response_to_SB_jam",
+      "hero_position": "BTN",
+      "history": [{"actor": "BTN", "type": "RAISE", "to_bb": 2}, {"actor": "SB", "type": "JAM", "to_bb": 15}],
+      "status": "MISSING_EXACT",
+      "source_node_id": null
+    },
+    {
+      "family": "BTN_response_to_BB_3bet_after_SB_fold",
+      "hero_position": "BTN",
+      "history": [{"actor": "BTN", "type": "RAISE", "to_bb": 2}, {"actor": "SB", "type": "FOLD"}, {"actor": "BB", "type": "RAISE", "to_bb": null}],
+      "status": "MISSING_EXACT",
+      "source_node_id": null,
+      "sizing_status": "UNRESOLVED_FROM_PRIMARY_SOURCE"
+    },
+    {
+      "family": "BTN_response_to_BB_jam_after_SB_fold",
+      "hero_position": "BTN",
+      "history": [{"actor": "BTN", "type": "RAISE", "to_bb": 2}, {"actor": "SB", "type": "FOLD"}, {"actor": "BB", "type": "JAM", "to_bb": 15}],
+      "status": "MISSING_EXACT",
+      "source_node_id": null
+    },
+    {
+      "family": "SB_response_after_BTN_open_and_BB_action",
+      "hero_position": "SB",
+      "history": [],
+      "status": "MISSING_EXACT",
+      "source_node_id": null,
+      "sizing_status": "EXPAND_INTO_DISTINCT_NODES_AFTER_PRIMARY_TREE_EXTRACTION",
+      "note": "Must never be represented as one generic defend/3bet chart; split by the exact BTN and BB public action history."
+    }
+  ],
+  "completion": {
+    "verified_exact_nodes": 0,
+    "primary_source_visual_only_nodes": 1,
+    "missing_exact_nodes": 14,
+    "merge_to_main_allowed": false
+  }
+}
