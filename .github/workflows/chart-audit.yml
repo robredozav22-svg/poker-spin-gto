@@ -16,6 +16,7 @@ on:
       - 'scripts/build-exact-index-entry.cjs'
       - 'scripts/import-gtowizard-upi-node.mjs'
       - 'scripts/test-gtowizard-upi-zero-reach.mjs'
+      - 'scripts/test-exact-promotion-pipeline.mjs'
       - 'scripts/audit-2026-crosschecks.mjs'
       - 'scripts/report-chart-coverage.mjs'
       - 'scripts/validate-benchmark-manifest.mjs'
@@ -42,6 +43,8 @@ jobs:
         run: node scripts/import-gtowizard-upi-node.mjs --self-test
       - name: Verify zero-reach hands remain unreachable
         run: node scripts/test-gtowizard-upi-zero-reach.mjs
+      - name: Run end-to-end exact promotion pipeline
+        run: node scripts/test-exact-promotion-pipeline.mjs
       - name: Validate exact Spin nodes
         run: node scripts/validate-exact-spin-nodes.mjs
       - name: Validate exact runtime index routes and checksums
