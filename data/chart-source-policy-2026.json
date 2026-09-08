@@ -1,5 +1,5 @@
 {
-  "schema_version": "chart-source-policy-2026-v1",
+  "schema_version": "chart-source-policy-2026-v2",
   "policy_year": 2026,
   "goal": "MAXIMUM_CURRENT_ACCURACY_NOT_SOURCE_IMITATION",
   "primary_baseline": {
@@ -15,19 +15,39 @@
       "provider": "PreflopRanges.app",
       "role": "INDEPENDENT_SOLVER_CROSSCHECK",
       "allowed_for_exact_promotion": false,
-      "use": ["aggregate frequency comparison", "action-tree/sizing comparison", "hand-boundary anomaly detection"]
+      "use": ["limited public spot checks", "aggregate frequency comparison", "action-tree/sizing comparison", "hand-boundary anomaly detection"],
+      "usage_policy": "NO_SCRAPING_NO_BULK_EXTRACTION_NO_RATE_LIMIT_BYPASS",
+      "profile_status": "PAYOUT_AND_ANTE_PROVENANCE_UNRESOLVED"
     },
     {
       "provider": "GTOCharts.com",
       "role": "SECONDARY_CURRENT_2026_REFERENCE",
       "allowed_for_exact_promotion": false,
-      "use": ["format coverage check", "gross range anomaly detection"]
+      "use": ["format coverage check", "gross range anomaly detection"],
+      "profile_status": "PUBLIC_PROVENANCE_INSUFFICIENT_FOR_EXACT_PROMOTION"
     },
     {
       "provider": "user supplied screenshots",
       "role": "HISTORICAL_VISUAL_CROSSCHECK",
       "allowed_for_exact_promotion": false,
       "use": ["tree identity crosscheck", "aggregate sanity check"]
+    },
+    {
+      "provider": "independent internal solver proof",
+      "role": "SAME_TREE_NUMERICAL_CROSSCHECK",
+      "allowed_for_exact_promotion": true,
+      "requirements": [
+        "same format/player count",
+        "same payout/chipEV profile",
+        "same ante profile",
+        "same effective stacks",
+        "same action history",
+        "same legal actions and exact sizings",
+        "source-bound reach ranges where applicable",
+        "independent evaluator/best-response proof",
+        "precommitted exploitability threshold",
+        "versioned immutable evidence"
+      ]
     }
   ],
   "promotion_gates": {
@@ -41,8 +61,10 @@
     "require_live_2026_source_capture": true,
     "require_internal_probability_conservation": true,
     "require_independent_crosscheck": true,
+    "allowed_independent_crosscheck_types": ["COMPATIBLE_EXTERNAL_SOURCE", "INDEPENDENT_INTERNAL_SOLVER_PROOF"],
     "require_tree_compatibility_before_numeric_comparison": true,
-    "require_disagreement_classification": true
+    "require_disagreement_classification": true,
+    "require_source_usage_compliance": true
   },
   "disagreement_classes": [
     "NONE",
@@ -60,6 +82,8 @@
     "Never compare aggregate frequencies as accuracy evidence until format, stack, payout, ante, positions, history and legal sizings match.",
     "A newer source does not automatically replace an older source if the game tree differs; it creates a distinct chart profile.",
     "No chart may be labelled BEST_2026 or VERIFIED_EXACT from screenshot reconstruction, aggregate-only data or solver marketing claims.",
-    "Self-generated solver output remains ResearchOnly until its own independent numerical proof and exact real-node reach state are validated."
+    "Self-generated solver output remains ResearchOnly until its own independent numerical proof and exact real-node reach state are validated.",
+    "Respect source terms and rate limits; do not scrape, bulk-download, bypass quotas or systematically extract a third-party chart dataset when prohibited.",
+    "A source can remain useful as a limited cross-check even when its terms or provenance make it ineligible for exact promotion."
   ]
 }
