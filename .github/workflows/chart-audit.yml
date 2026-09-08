@@ -12,6 +12,7 @@ on:
       - 'scripts/validate-chart-data.mjs'
       - 'scripts/validate-exact-spin-nodes.mjs'
       - 'scripts/validate-exact-index.cjs'
+      - 'scripts/build-exact-index-entry.cjs'
       - 'scripts/import-gtowizard-upi-node.mjs'
       - 'scripts/test-gtowizard-upi-zero-reach.mjs'
       - 'scripts/audit-2026-crosschecks.mjs'
@@ -42,8 +43,10 @@ jobs:
         run: node scripts/test-gtowizard-upi-zero-reach.mjs
       - name: Validate exact Spin nodes
         run: node scripts/validate-exact-spin-nodes.mjs
-      - name: Validate exact runtime index routes
+      - name: Validate exact runtime index routes and checksums
         run: node scripts/validate-exact-index.cjs
+      - name: Test exact runtime store integrity
+        run: node tests/test_exact_store.js
       - name: Self-test 2026 cross-check classifier
         run: node scripts/audit-2026-crosschecks.mjs --self-test
       - name: Audit 2026 cross-check compatibility and disagreements
