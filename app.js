@@ -1,78 +1,33 @@
 const RANKS=['A','K','Q','J','T','9','8','7','6','5','4','3','2'];
 const STACKS=[2,4,6,8,10,12,15,17,20,23,25];
-const RECENT_KEY='spins-v45-recent';
-const FAVORITE_KEY='spins-v45-favorites';
-const Router=window.SpinsRouter;
-const Grid=window.SpinsGrid;
-const HAND_NAMES=[];
-for(let r=0;r<13;r++)for(let c=0;c<13;c++)HAND_NAMES.push(r===c?RANKS[r]+RANKS[c]:(r<c?RANKS[r]+RANKS[c]+'s':RANKS[c]+RANKS[r]+'o'));
-
-// Intentionally empty until a node has VERIFIED_EXACT 169-hand frequencies.
-const EXACT_HAND_CHARTS=Object.create(null);
-
+const RECENT_KEY='spins-v46-recent',FAVORITE_KEY='spins-v46-favorites';
+const Router=window.SpinsRouter,Grid=window.SpinsGrid,ExactStore=window.SpinsExactStore;
+const HAND_NAMES=[];for(let r=0;r<13;r++)for(let c=0;c<13;c++)HAND_NAMES.push(r===c?RANKS[r]+RANKS[c]:(r<c?RANKS[r]+RANKS[c]+'s':RANKS[c]+RANKS[r]+'o'));
+const loadingExact=new Set(),failedExact=new Map();
 const REFERENCE_NODES={
-  '15|':{hero:'BTN',actions:['Fold','Raise 2','All In 15'],legend:[['Fold',67.22,'fold'],['Raise 2',25.41,'raise'],['All In 15',7.36,'jam']],status:'SCREEN_CROSSCHECK'},
-  '15|BTN:Raise 2':{hero:'SB',actions:['Fold','Call','All In 15'],legend:[['Fold',78.31,'fold'],['Call',2.41,'call'],['All In 15',19.27,'jam']],status:'SCREEN_CROSSCHECK'},
-  '15|BTN:Raise 2>SB:Call':{hero:'BB',actions:['Fold','Call','All In 15'],legend:[['Fold',59.11,'fold'],['Call',22.19,'call'],['All In 15',18.70,'jam']],status:'SCREEN_CROSSCHECK'},
-  '15|BTN:Fold':{hero:'SB',actions:['Fold','Call','Raise 3','All In 15'],legend:null,status:'TREE_REFERENCE_ONLY'},
-  '15|BTN:Fold>SB:Raise 3':{hero:'BB',actions:['Fold','Call','All In 15'],legend:[['Fold',47.12,'fold'],['Call',33.85,'call'],['All In 15',19.01,'jam']],status:'SCREEN_CROSSCHECK'},
-  '2|HU':{hero:'BTN',actions:['Fold','Call','All In 2'],legend:[['Fold',57.16,'fold'],['Call',0.03,'call'],['All In 2',42.82,'jam']],status:'HU_SCREEN_REFERENCE'}
-};
-
+'15|':{hero:'BTN',actions:['Fold','Raise 2','All In 15'],legend:[['Fold',67.22,'fold'],['Raise 2',25.41,'raise'],['All In 15',7.36,'jam']],status:'SCREEN_CROSSCHECK'},
+'15|BTN:Raise 2':{hero:'SB',actions:['Fold','Call','All In 15'],legend:[['Fold',78.31,'fold'],['Call',2.41,'call'],['All In 15',19.27,'jam']],status:'SCREEN_CROSSCHECK'},
+'15|BTN:Raise 2>SB:Call':{hero:'BB',actions:['Fold','Call','All In 15'],legend:[['Fold',59.11,'fold'],['Call',22.19,'call'],['All In 15',18.70,'jam']],status:'SCREEN_CROSSCHECK'},
+'15|BTN:Fold':{hero:'SB',actions:['Fold','Call','Raise 3','All In 15'],legend:null,status:'TREE_REFERENCE_ONLY'},
+'15|BTN:Fold>SB:Raise 3':{hero:'BB',actions:['Fold','Call','All In 15'],legend:[['Fold',47.12,'fold'],['Call',33.85,'call'],['All In 15',19.01,'jam']],status:'SCREEN_CROSSCHECK'},
+'2|HU':{hero:'BTN',actions:['Fold','Call','All In 2'],legend:[['Fold',57.16,'fold'],['Call',0.03,'call'],['All In 2',42.82,'jam']],status:'HU_SCREEN_REFERENCE'}};
 let state={stack:15,history:[],future:[],hu:false,recentOpen:false,favoriteOpen:false,mode:'REVIEW'};
-
-function legacyKey(){return Router.legacyReferenceKey(state);}
-function canonicalKey(){return Router.canonicalNodeId(state);}
-function currentNode(){return REFERENCE_NODES[legacyKey()]||null;}
-function seats(){return state.hu?['BTN','SB']:['BTN','SB','BB'];}
-function selectedAction(pos){const h=state.history.find(x=>x.pos===pos);return h?h.action:null;}
-
-function compactStatus(raw){if(raw==='VERIFIED_EXACT')return ['EXACT','exact'];if(raw==='SCREEN_CROSSCHECK'||raw==='HU_SCREEN_REFERENCE')return ['CROSS-CHECK','cross'];if(raw==='SOLVER_APPROX'||raw==='TREE_REFERENCE_ONLY')return ['APPROX','approx'];return ['MISSING','missing'];}
-function readList(key){try{return JSON.parse(localStorage.getItem(key)||'[]');}catch{return [];}}
-function writeList(key,items,max=12){localStorage.setItem(key,JSON.stringify(items.slice(0,max)));}
-function routeEntry(){return {stack:state.stack,hu:state.hu,history:Router.cloneHistory(state.history),key:canonicalKey(),ts:Date.now()};}
-function rememberCurrent(){if(!state.history.length)return;const e=routeEntry();writeList(RECENT_KEY,[e,...readList(RECENT_KEY).filter(x=>x.key!==e.key)],8);}
-function labelRoute(item){const prefix=`${item.hu?'HU':'3M'} ${item.stack}BB`;const hist=item.history.length?item.history.map(x=>`${x.pos} ${x.action}`).join(' / '):'First in';return `${prefix} · ${hist}`;}
-function isFavorite(){return readList(FAVORITE_KEY).some(x=>x.key===canonicalKey());}
-function toggleFavorite(){const key=canonicalKey();let items=readList(FAVORITE_KEY);if(items.some(x=>x.key===key))items=items.filter(x=>x.key!==key);else items=[routeEntry(),...items];writeList(FAVORITE_KEY,items,20);renderNav();renderFavorites();}
-function restoreRoute(item){state={...state,stack:item.stack,hu:item.hu,history:Router.cloneHistory(item.history),future:[],recentOpen:false,favoriteOpen:false};render();}
-
-function renderStacks(){const el=document.getElementById('stacks');el.innerHTML='';STACKS.forEach(s=>{const b=document.createElement('button');b.className='stack-btn'+(s===state.stack?' active':'');b.textContent=s;b.onclick=()=>{state={...state,stack:s,history:[],future:[],hu:false};render();};el.appendChild(b);});}
-
-function renderGrid(){
-  const grid=document.getElementById('grid');grid.innerHTML='';
-  const cells={};
-  for(const hand of HAND_NAMES){const cell=document.createElement('div');cell.className='hand unverified';const label=document.createElement('span');label.className='label';label.textContent=hand;cell.appendChild(label);grid.appendChild(cell);cells[hand]=cell;}
-  const warning=document.getElementById('gridWarning');
-  const chart=EXACT_HAND_CHARTS[canonicalKey()];
-  if(!chart){warning.textContent='Нет VERIFIED_EXACT hand frequencies для этого узла. Приблизительные границы не показываются.';warning.classList.remove('hidden');return;}
-  try{Grid.validateChart(chart,HAND_NAMES);for(const hand of HAND_NAMES)Grid.renderCell(cells[hand],hand,chart[hand]);warning.classList.add('hidden');}
-  catch(err){warning.textContent='Chart validation failed: '+err.message;warning.classList.remove('hidden');}
-}
-
-function renderLegend(node){const el=document.getElementById('legend');el.innerHTML='';if(!node||!node.legend){el.textContent='Нет подтверждённых aggregate frequencies для этого узла.';return;}node.legend.forEach(([name,pct,cls])=>{const d=document.createElement('div');d.innerHTML=`<span class="dot ${cls}"></span>${name} (${pct.toFixed(2)}%)`;el.appendChild(d);});}
-function legalFallback(pos){if(pos==='BTN')return ['Fold','Raise 2','All In '+state.stack];if(pos==='SB')return ['Fold','Call','Raise 3','All In '+state.stack];return ['Fold','Call','All In '+state.stack];}
-function renderTree(node){const tree=document.getElementById('tree');tree.innerHTML='';seats().forEach(pos=>{const card=document.createElement('section');card.className='seat'+(node&&node.hero===pos?' active':'');const head=document.createElement('div');head.className='seat-head';head.innerHTML=`<span>${pos}</span><span>${state.stack}</span>`;card.appendChild(head);const actions=document.createElement('div');actions.className='seat-actions';const chosen=selectedAction(pos);let opts=[];if(chosen)opts=[chosen];else if(node&&node.hero===pos)opts=node.actions;else if(!node&&pos===Router.nextPosition(state))opts=legalFallback(pos);else opts=['—'];opts.forEach(a=>{const b=document.createElement('button');b.className='action-btn'+(chosen===a?' selected':'');b.textContent=a;if(a==='—'||chosen)b.disabled=true;else b.onclick=()=>advance(pos,a);actions.appendChild(b);});card.appendChild(actions);tree.appendChild(card);});}
-function advance(pos,action){state=Router.appendAction(state,pos,action);rememberCurrent();render();}
-function goBack(){state=Router.back(state);render();}
-function goForward(){state=Router.forward(state);if(state.history.length)rememberCurrent();render();}
-function reset(){state={...state,history:[],future:[]};render();}
-function renderListPanel(id,key,open){const panel=document.getElementById(id);panel.innerHTML='';panel.classList.toggle('hidden',!open);if(!open)return;const items=readList(key);if(!items.length){panel.textContent='Список пока пуст.';return;}items.forEach(item=>{const b=document.createElement('button');b.className='recent-item';b.textContent=labelRoute(item);b.onclick=()=>restoreRoute(item);panel.appendChild(b);});}
-function renderRecent(){renderListPanel('recentPanel',RECENT_KEY,state.recentOpen);}
-function renderFavorites(){renderListPanel('favoritePanel',FAVORITE_KEY,state.favoriteOpen);}
-function renderStatus(node){const el=document.getElementById('status');const hist=state.history.length?state.history.map(x=>`${x.pos} ${x.action}`).join(' → '):'First in';const raw=EXACT_HAND_CHARTS[canonicalKey()]?'VERIFIED_EXACT':(node?node.status:'NO_VERIFIED_NODE');const [label,cls]=compactStatus(raw);el.innerHTML=`<div class="status-main"><strong>${state.hu?'HU':'3-MAX'} · EFF ${state.stack} BB</strong><span class="source-badge ${cls}">${label}</span></div><div>${hist}</div><div class="status-raw">${canonicalKey()} · ${raw}</div>`;}
-function renderTrain(node){const p=document.getElementById('trainPrompt');const active=state.mode==='TRAIN';p.classList.toggle('hidden',!active);if(!active)return;if(!EXACT_HAND_CHARTS[canonicalKey()]){p.innerHTML='<strong>TRAIN заблокирован для этого узла.</strong><br>Нужны VERIFIED_EXACT 169-hand frequencies; CROSS-CHECK/APPROX не используются как ответы тренажёра.';return;}p.textContent='TRAIN ready';}
-function renderMode(){document.getElementById('reviewMode').classList.toggle('active',state.mode==='REVIEW');document.getElementById('trainMode').classList.toggle('active',state.mode==='TRAIN');document.getElementById('modeLabel').textContent=`${state.mode} · V45 prototype`;}
-function renderNav(){document.getElementById('backBtn').disabled=!state.history.length;document.getElementById('forwardBtn').disabled=!state.future.length;const fav=document.getElementById('favoriteBtn');fav.textContent=isFavorite()?'★':'☆';fav.classList.toggle('active',isFavorite());document.getElementById('recentToggle').classList.toggle('active',state.recentOpen);document.getElementById('favoritesToggle').classList.toggle('active',state.favoriteOpen);}
-function render(){renderMode();renderStacks();renderGrid();const node=currentNode();renderLegend(node);renderTree(node);renderStatus(node);renderTrain(node);renderNav();renderRecent();renderFavorites();}
-
-document.getElementById('reset').onclick=reset;
-document.getElementById('backBtn').onclick=goBack;
-document.getElementById('forwardBtn').onclick=goForward;
-document.getElementById('recentToggle').onclick=()=>{state={...state,recentOpen:!state.recentOpen,favoriteOpen:false};render();};
-document.getElementById('favoritesToggle').onclick=()=>{state={...state,favoriteOpen:!state.favoriteOpen,recentOpen:false};render();};
-document.getElementById('favoriteBtn').onclick=toggleFavorite;
-document.getElementById('reviewMode').onclick=()=>{state={...state,mode:'REVIEW'};render();};
-document.getElementById('trainMode').onclick=()=>{state={...state,mode:'TRAIN'};render();};
-document.getElementById('huToggle').onclick=()=>{const hu=!state.hu;state={...state,hu,history:[],future:[],stack:hu?2:15};render();};
-render();
+function legacyKey(){return Router.legacyReferenceKey(state)}function canonicalKey(){return Router.canonicalNodeId(state)}function currentNode(){return REFERENCE_NODES[legacyKey()]||null}function exactNode(){return ExactStore.getCached(canonicalKey())}function seats(){return state.hu?['BTN','SB']:['BTN','SB','BB']}function selectedAction(pos){const h=state.history.find(x=>x.pos===pos);return h?h.action:null}
+function requestExact(){const key=canonicalKey();if(exactNode()||loadingExact.has(key)||failedExact.has(key))return;loadingExact.add(key);ExactStore.loadNode(key).then(node=>{loadingExact.delete(key);if(node)render();}).catch(err=>{loadingExact.delete(key);failedExact.set(key,err.message);render();});}
+function compactStatus(raw){if(raw==='VERIFIED_EXACT')return['EXACT','exact'];if(raw==='SCREEN_CROSSCHECK'||raw==='HU_SCREEN_REFERENCE')return['CROSS-CHECK','cross'];if(raw==='TREE_REFERENCE_ONLY')return['APPROX','approx'];if(raw==='EXACT_LOAD_ERROR')return['ERROR','missing'];return['MISSING','missing']}
+function readList(k){try{return JSON.parse(localStorage.getItem(k)||'[]')}catch{return[]}}function writeList(k,x,m=12){localStorage.setItem(k,JSON.stringify(x.slice(0,m)))}function routeEntry(){return{stack:state.stack,hu:state.hu,history:Router.cloneHistory(state.history),key:canonicalKey(),ts:Date.now()}}function rememberCurrent(){if(!state.history.length)return;const e=routeEntry();writeList(RECENT_KEY,[e,...readList(RECENT_KEY).filter(x=>x.key!==e.key)],8)}function labelRoute(i){return`${i.hu?'HU':'3M'} ${i.stack}BB · ${i.history.length?i.history.map(x=>`${x.pos} ${x.action}`).join(' / '):'First in'}`}function isFavorite(){return readList(FAVORITE_KEY).some(x=>x.key===canonicalKey())}function toggleFavorite(){const k=canonicalKey();let x=readList(FAVORITE_KEY);x=x.some(i=>i.key===k)?x.filter(i=>i.key!==k):[routeEntry(),...x];writeList(FAVORITE_KEY,x,20);render()}function restoreRoute(i){state={...state,stack:i.stack,hu:i.hu,history:Router.cloneHistory(i.history),future:[],recentOpen:false,favoriteOpen:false};render()}
+function renderStacks(){const el=document.getElementById('stacks');el.innerHTML='';STACKS.forEach(s=>{const b=document.createElement('button');b.className='stack-btn'+(s===state.stack?' active':'');b.textContent=s;b.onclick=()=>{state={...state,stack:s,history:[],future:[],hu:false};render()};el.appendChild(b)})}
+function renderGrid(){const grid=document.getElementById('grid');grid.innerHTML='';const cells={};for(const hand of HAND_NAMES){const c=document.createElement('div');c.className='hand unverified';const l=document.createElement('span');l.className='label';l.textContent=hand;c.appendChild(l);grid.appendChild(c);cells[hand]=c}const w=document.getElementById('gridWarning'),node=exactNode(),key=canonicalKey();if(!node){if(failedExact.has(key))w.textContent='VERIFIED_EXACT node не загружен: '+failedExact.get(key);else if(loadingExact.has(key))w.textContent='Проверяю VERIFIED_EXACT node…';else w.textContent='Нет VERIFIED_EXACT hand frequencies для этого узла. Приблизительные границы не показываются.';w.classList.remove('hidden');requestExact();return}try{if(node.verification_status!=='VERIFIED_EXACT')throw new Error('node is not VERIFIED_EXACT');Grid.validateExactHands(node.hands,HAND_NAMES);for(const h of HAND_NAMES)Grid.renderExactCell(cells[h],h,node.hands[h]);w.classList.add('hidden')}catch(err){w.textContent='Exact chart validation failed: '+err.message;w.classList.remove('hidden')}}
+function exactLegend(node){if(!node?.aggregate||!Array.isArray(node.actions))return null;return node.actions.map(a=>[a.id,(node.aggregate[a.id]||0)*100,Grid.actionClass(a.id)])}
+function renderLegend(ref){const el=document.getElementById('legend');el.innerHTML='';const legend=exactLegend(exactNode())||ref?.legend;if(!legend){el.textContent='Нет подтверждённых aggregate frequencies для этого узла.';return}legend.forEach(([n,p,c])=>{const d=document.createElement('div');d.innerHTML=`<span class="dot ${c}"></span>${n} (${Number(p).toFixed(2)}%)`;el.appendChild(d)})}
+function legalFallback(pos){if(pos==='BTN')return['Fold','Raise 2','All In '+state.stack];if(pos==='SB')return['Fold','Call','Raise 3','All In '+state.stack];return['Fold','Call','All In '+state.stack]}
+function actionLabel(a){if(a.type==='FOLD')return'Fold';if(a.type==='CALL')return'Call';if(a.type==='CHECK')return'Check';if(a.type==='LIMP')return'Limp';if(a.type==='JAM')return`All In ${a.to_bb}`;if(a.type==='RAISE')return`Raise ${a.to_bb}`;return a.id}
+function renderTree(ref){const tree=document.getElementById('tree');tree.innerHTML='';const ex=exactNode();seats().forEach(pos=>{const card=document.createElement('section');card.className='seat'+(((ex&&ex.hero_position===pos)||(ref&&ref.hero===pos))?' active':'');const head=document.createElement('div');head.className='seat-head';head.innerHTML=`<span>${pos}</span><span>${state.stack}</span>`;card.appendChild(head);const actions=document.createElement('div');actions.className='seat-actions';const chosen=selectedAction(pos);let opts=[];if(chosen)opts=[chosen];else if(ex&&ex.hero_position===pos)opts=ex.actions.map(actionLabel);else if(ref&&ref.hero===pos)opts=ref.actions;else if(!ref&&!ex&&pos===Router.nextPosition(state))opts=legalFallback(pos);else opts=['—'];opts.forEach(a=>{const b=document.createElement('button');b.className='action-btn'+(chosen===a?' selected':'');b.textContent=a;if(a==='—'||chosen)b.disabled=true;else b.onclick=()=>advance(pos,a);actions.appendChild(b)});card.appendChild(actions);tree.appendChild(card)})}
+function advance(pos,a){state=Router.appendAction(state,pos,a);rememberCurrent();render()}function goBack(){state=Router.back(state);render()}function goForward(){state=Router.forward(state);if(state.history.length)rememberCurrent();render()}function reset(){state={...state,history:[],future:[]};render()}
+function renderListPanel(id,key,open){const p=document.getElementById(id);p.innerHTML='';p.classList.toggle('hidden',!open);if(!open)return;const items=readList(key);if(!items.length){p.textContent='Список пока пуст.';return}items.forEach(i=>{const b=document.createElement('button');b.className='recent-item';b.textContent=labelRoute(i);b.onclick=()=>restoreRoute(i);p.appendChild(b)})}
+function renderStatus(ref){const el=document.getElementById('status'),hist=state.history.length?state.history.map(x=>`${x.pos} ${x.action}`).join(' → '):'First in',key=canonicalKey(),raw=exactNode()?'VERIFIED_EXACT':failedExact.has(key)?'EXACT_LOAD_ERROR':ref?ref.status:'NO_VERIFIED_NODE',[label,cls]=compactStatus(raw);el.innerHTML=`<div class="status-main"><strong>${state.hu?'HU':'3-MAX'} · EFF ${state.stack} BB</strong><span class="source-badge ${cls}">${label}</span></div><div>${hist}</div><div class="status-raw">${key} · ${raw}</div>`}
+function renderTrain(){const p=document.getElementById('trainPrompt'),active=state.mode==='TRAIN';p.classList.toggle('hidden',!active);if(!active)return;if(!exactNode()){p.innerHTML='<strong>TRAIN заблокирован для этого узла.</strong><br>Нужен VERIFIED_EXACT source-bound node; CROSS-CHECK/APPROX не используются как ответы.';return}p.textContent='TRAIN ready · VERIFIED_EXACT'}
+function renderMode(){document.getElementById('reviewMode').classList.toggle('active',state.mode==='REVIEW');document.getElementById('trainMode').classList.toggle('active',state.mode==='TRAIN');document.getElementById('modeLabel').textContent=`${state.mode} · V46 exact-gated`}
+function renderNav(){document.getElementById('backBtn').disabled=!state.history.length;document.getElementById('forwardBtn').disabled=!state.future.length;const f=document.getElementById('favoriteBtn');f.textContent=isFavorite()?'★':'☆';f.classList.toggle('active',isFavorite());document.getElementById('recentToggle').classList.toggle('active',state.recentOpen);document.getElementById('favoritesToggle').classList.toggle('active',state.favoriteOpen)}
+function render(){renderMode();renderStacks();renderGrid();const ref=currentNode();renderLegend(ref);renderTree(ref);renderStatus(ref);renderTrain();renderNav();renderListPanel('recentPanel',RECENT_KEY,state.recentOpen);renderListPanel('favoritePanel',FAVORITE_KEY,state.favoriteOpen)}
+document.getElementById('reset').onclick=reset;document.getElementById('backBtn').onclick=goBack;document.getElementById('forwardBtn').onclick=goForward;document.getElementById('recentToggle').onclick=()=>{state={...state,recentOpen:!state.recentOpen,favoriteOpen:false};render()};document.getElementById('favoritesToggle').onclick=()=>{state={...state,favoriteOpen:!state.favoriteOpen,recentOpen:false};render()};document.getElementById('favoriteBtn').onclick=toggleFavorite;document.getElementById('reviewMode').onclick=()=>{state={...state,mode:'REVIEW'};render()};document.getElementById('trainMode').onclick=()=>{state={...state,mode:'TRAIN'};render()};document.getElementById('huToggle').onclick=()=>{const hu=!state.hu;state={...state,hu,history:[],future:[],stack:hu?2:15};render()};render();
