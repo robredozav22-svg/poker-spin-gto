@@ -14,6 +14,7 @@ on:
       - 'scripts/import-gtowizard-upi-node.mjs'
       - 'scripts/test-gtowizard-upi-zero-reach.mjs'
       - 'scripts/audit-2026-crosschecks.mjs'
+      - 'scripts/report-chart-coverage.mjs'
       - 'scripts/validate-benchmark-manifest.mjs'
       - '.github/workflows/chart-audit.yml'
   workflow_dispatch:
@@ -44,6 +45,8 @@ jobs:
         run: node scripts/audit-2026-crosschecks.mjs --self-test
       - name: Audit 2026 cross-check compatibility and disagreements
         run: node scripts/audit-2026-crosschecks.mjs
+      - name: Report exact chart coverage
+        run: node scripts/report-chart-coverage.mjs
       - name: Test exact UI grid
         run: node tests/test_ui_grid.js
       - name: Test UI router
