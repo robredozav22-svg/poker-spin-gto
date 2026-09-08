@@ -19,13 +19,18 @@ if(Math.abs(node.aggregate.FOLD-0.6)>1e-10||Math.abs(node.aggregate.RAISE_TO_2BB
 const route=Router.canonicalNodeIdFromExactNode(node);if(route!=='3MAX/WTA_CHIPEV_BASELINE/NONE/15/ROOT')throw new Error(`unexpected route ${route}`);
 const text=JSON.stringify(node,null,2)+'\n';const sha256=`sha256:${crypto.createHash('sha256').update(text,'utf8').digest('hex')}`;
 const entry={path:'data/charts/exact/integration-fixture.json',artifact_id:node.id,sha256,captured_at:node.source.captured_at};Store.validateIndexEntry(route,entry);
-const proof={status:'PROMOTED_2026_EXACT',artifact_id:entry.artifact_id,path:entry.path,sha256:entry.sha256,captured_at:entry.captured_at,checks:{live_2026_source:'PASS',exact_node_schema:'PASS',upi_action_conservation:'PASS',zero_reach_guard:'PASS',suit_symmetry:'PASS',aggregate_recompute:'PASS',canonical_route:'PASS',artifact_sha256:'PASS',independent_crosscheck:'PASS_COMPATIBLE',unexplained_numeric_disagreement:false},crosscheck:{provider:'INTEGRATION_INDEPENDENT_FIXTURE',compatibility_resolved:true,classification:'ROUNDING_ONLY',captured_at:'2026-09-08T08:40:01Z'}};
+const proof={
+  status:'PROMOTED_2026_EXACT',artifact_id:entry.artifact_id,path:entry.path,sha256:entry.sha256,captured_at:entry.captured_at,
+  checks:{live_2026_source:'PASS',exact_node_schema:'PASS',upi_action_conservation:'PASS',zero_reach_guard:'PASS',suit_symmetry:'PASS',aggregate_recompute:'PASS',canonical_route:'PASS',artifact_sha256:'PASS',source_usage_compliance:'PASS',independent_crosscheck:'PASS_COMPATIBLE',unexplained_numeric_disagreement:false},
+  crosscheck:{type:'COMPATIBLE_EXTERNAL_SOURCE',provider:'INTEGRATION_INDEPENDENT_FIXTURE',compatibility_resolved:true,same_tree_profile:true,source_usage_compliant:true,classification:'ROUNDING_ONLY',captured_at:'2026-09-08T08:40:01Z'}
+};
 Store.validatePromotionProof(route,entry,proof);
 if(Router.canonicalNodeIdFromExactNode({...node,ante_profile:'SPIN_PLUS_ANTE_0_2BB'})===route)throw new Error('ante collision not blocked');
 if(Router.canonicalNodeIdFromExactNode({...node,payout_profile:'HIGH_MULTIPLIER_ICM'})===route)throw new Error('payout collision not blocked');
 let rejected=0;try{Store.validatePromotionProof(route,entry,{...proof,sha256:'sha256:'+'0'.repeat(64)});}catch{rejected++;}
-const badCross=structuredClone(proof);badCross.checks.independent_crosscheck='PROFILE_UNRESOLVED';try{Store.validatePromotionProof(route,entry,badCross);}catch{rejected++;}
+const unresolved=structuredClone(proof);unresolved.checks.independent_crosscheck='PROFILE_UNRESOLVED';try{Store.validatePromotionProof(route,entry,unresolved);}catch{rejected++;}
+const noncompliant=structuredClone(proof);noncompliant.crosscheck.source_usage_compliant=false;try{Store.validatePromotionProof(route,entry,noncompliant);}catch{rejected++;}
 const fatal=structuredClone(proof);fatal.checks.unexplained_numeric_disagreement=true;fatal.crosscheck.classification='UNEXPLAINED_NUMERIC_DISAGREEMENT';try{Store.validatePromotionProof(route,entry,fatal);}catch{rejected++;}
 const zeroCapture=structuredClone(capture);zeroCapture.id='integration-zero-reach';zeroCapture.full_range_upi='AA: 1';zeroCapture.actions=[{id:'FOLD',type:'FOLD',range_upi:'AA: 0.4'},{id:'JAM_TO_15BB',type:'JAM',to_bb:15,range_upi:'AA: 0.6'}];const zero=importCapture(zeroCapture);if(zero.hands.KK.range_weight!==0||zero.hands.KK.strategy!==null)throw new Error('zero reach became action');
-if(rejected!==3)throw new Error(`expected 3 corrupted promotion proofs rejected, got ${rejected}`);
-console.log(`Exact promotion pipeline PASS: live-2026 capture -> 1326 -> 169 -> ${route} -> SHA-256 -> promotion; ante/payout/SHA/crosscheck/zero-reach guards verified.`);
+if(rejected!==4)throw new Error(`expected 4 corrupted promotion proofs rejected, got ${rejected}`);
+console.log(`Exact promotion pipeline PASS: live-2026 capture -> 1326 -> 169 -> ${route} -> SHA-256 -> compliant independent promotion; ante/payout/SHA/source-usage/crosscheck/zero-reach guards verified.`);
