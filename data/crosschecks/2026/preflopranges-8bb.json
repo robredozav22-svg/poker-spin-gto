@@ -1,0 +1,14 @@
+{
+  "schema_version": "spin-crosscheck-profile-v1",
+  "captured_at": "2026-09-08T07:23:00Z",
+  "source": {"provider":"PreflopRanges.app","role":"INDEPENDENT_SOLVER_CROSSCHECK","urls":["https://preflopranges.app/charts/spins/8bb","https://preflopranges.app/charts/spins/btn-open-8bb","https://preflopranges.app/charts/spins/sb-open-8bb"]},
+  "format": "SPIN_3MAX",
+  "effective_stack_bb": 8,
+  "payout_profile": "UNRESOLVED_PUBLIC_SOURCE",
+  "ante_profile": "UNRESOLVED_PUBLIC_SOURCE",
+  "nodes": [
+    {"id":"preflopranges-8bb-btn-first-in","hero_position":"BTN","history":[],"actions":[{"id":"FOLD","type":"FOLD"},{"id":"JAM_TO_8BB","type":"JAM","to_bb":8}],"aggregate":{"FOLD":0.657,"JAM_TO_8BB":0.343}},
+    {"id":"preflopranges-8bb-sb-first-in","hero_position":"SB","history":[{"actor":"BTN","type":"FOLD"}],"actions":[{"id":"FOLD","type":"FOLD"},{"id":"RAISE_TO_2BB","type":"RAISE","to_bb":2},{"id":"LIMP","type":"LIMP"},{"id":"JAM_TO_8BB","type":"JAM","to_bb":8}],"aggregate":{"FOLD":0.35,"RAISE_TO_2BB":0.06,"LIMP":0.065,"JAM_TO_8BB":0.526}}
+  ],
+  "promotion_use":"CROSSCHECK_ONLY"
+}
