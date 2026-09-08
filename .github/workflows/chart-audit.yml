@@ -40,6 +40,8 @@ jobs:
         run: node scripts/test-gtowizard-upi-zero-reach.mjs
       - name: Validate exact Spin nodes
         run: node scripts/validate-exact-spin-nodes.mjs
+      - name: Self-test 2026 cross-check classifier
+        run: node scripts/audit-2026-crosschecks.mjs --self-test
       - name: Audit 2026 cross-check compatibility and disagreements
         run: node scripts/audit-2026-crosschecks.mjs
       - name: Test exact UI grid
