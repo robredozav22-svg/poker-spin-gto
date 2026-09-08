@@ -2,12 +2,14 @@
 
 const fs=require('fs');
 const path=require('path');
+const crypto=require('crypto');
 
 const root=path.resolve(__dirname,'..');
 const index=JSON.parse(fs.readFileSync(path.join(root,'data','charts','exact-index.json'),'utf8'));
 const manifest=JSON.parse(fs.readFileSync(path.join(root,'data','charts','exact-promotion-manifest.json'),'utf8'));
 const errors=[];
 function fail(x){errors.push(x);}
+function sha256Text(text){return`sha256:${crypto.createHash('sha256').update(text,'utf8').digest('hex')}`;}
 
 function validateExternal(indexKey,cross,bad){
   if(typeof cross.provider!=='string'||!cross.provider.trim())bad(`${indexKey}: external crosscheck.provider missing`);
@@ -23,9 +25,17 @@ function validateInternal(indexKey,cross,bad){
   if(cross.independent_evaluator!==true)bad(`${indexKey}: internal solver proof requires independent_evaluator`);
   if(cross.independent_best_response!==true)bad(`${indexKey}: internal solver proof requires independent_best_response`);
   if(cross.precommitted_threshold_pass!==true)bad(`${indexKey}: internal solver proof requires precommitted threshold PASS`);
+  let evidenceFull=null;
   if(typeof cross.evidence_path!=='string'||!cross.evidence_path.startsWith('data/solver-evidence/')||!cross.evidence_path.endsWith('.json'))bad(`${indexKey}: internal solver evidence_path invalid`);
-  else if(!fs.existsSync(path.join(root,cross.evidence_path)))bad(`${indexKey}: internal solver evidence file missing ${cross.evidence_path}`);
+  else{
+    evidenceFull=path.join(root,cross.evidence_path);
+    if(!fs.existsSync(evidenceFull))bad(`${indexKey}: internal solver evidence file missing ${cross.evidence_path}`);
+  }
   if(typeof cross.evidence_sha256!=='string'||!/^sha256:[0-9a-f]{64}$/.test(cross.evidence_sha256))bad(`${indexKey}: internal solver evidence_sha256 invalid`);
+  else if(evidenceFull&&fs.existsSync(evidenceFull)){
+    const actual=sha256Text(fs.readFileSync(evidenceFull,'utf8'));
+    if(actual!==cross.evidence_sha256)bad(`${indexKey}: internal solver evidence checksum mismatch; expected ${cross.evidence_sha256} actual ${actual}`);
+  }
   if(!['SOLVER_TOLERANCE','NONE'].includes(cross.classification))bad(`${indexKey}: internal solver classification not promotable: ${cross.classification}`);
 }
 
@@ -62,10 +72,13 @@ function selfTest(){
   const noCross=structuredClone(good);noCross.checks.independent_crosscheck='PROFILE_UNRESOLVED';if(!validatePromotion('k',idx,noCross).some(x=>x.includes('independent_crosscheck')))throw new Error('unresolved crosscheck not rejected');
   const fatal=structuredClone(good);fatal.checks.unexplained_numeric_disagreement=true;fatal.crosscheck.classification='UNEXPLAINED_NUMERIC_DISAGREEMENT';if(validatePromotion('k',idx,fatal).length<2)throw new Error('fatal disagreement not rejected');
   const wrongSha=structuredClone(good);wrongSha.sha256='sha256:'+'2'.repeat(64);if(!validatePromotion('k',idx,wrongSha).some(x=>x.includes('sha256 mismatch')))throw new Error('sha mismatch not rejected');
-  const internal=baseGood(idx);internal.crosscheck={type:'INDEPENDENT_INTERNAL_SOLVER_PROOF',same_tree_profile:true,independent_evaluator:true,independent_best_response:true,precommitted_threshold_pass:true,evidence_path:'data/solver-evidence/turn-river-research-fixture-v1.json',evidence_sha256:'sha256:'+'3'.repeat(64),classification:'SOLVER_TOLERANCE'};
+  const evidencePath='data/solver-evidence/turn-river-research-fixture-v1.json';
+  const evidenceSha=sha256Text(fs.readFileSync(path.join(root,evidencePath),'utf8'));
+  const internal=baseGood(idx);internal.crosscheck={type:'INDEPENDENT_INTERNAL_SOLVER_PROOF',same_tree_profile:true,independent_evaluator:true,independent_best_response:true,precommitted_threshold_pass:true,evidence_path:evidencePath,evidence_sha256:evidenceSha,classification:'SOLVER_TOLERANCE'};
   if(validatePromotion('k',idx,internal).length)throw new Error('valid internal proof rejected');
   const weak=structuredClone(internal);weak.crosscheck.independent_best_response=false;if(!validatePromotion('k',idx,weak).some(x=>x.includes('independent_best_response')))throw new Error('weak internal proof not rejected');
-  console.log('Exact promotion validator self-test PASS: compliant external and independent internal proof types enforced; weak/noncompliant evidence fails closed.');
+  const tampered=structuredClone(internal);tampered.crosscheck.evidence_sha256='sha256:'+'0'.repeat(64);if(!validatePromotion('k',idx,tampered).some(x=>x.includes('evidence checksum mismatch')))throw new Error('tampered internal evidence not rejected');
+  console.log('Exact promotion validator self-test PASS: compliant external and immutable independent internal proof types enforced; weak/noncompliant/tampered evidence fails closed.');
 }
 
 function main(){
@@ -82,7 +95,7 @@ function main(){
     if(p?.artifact_id!==artifact)fail(`${artifact}: manifest key/artifact_id mismatch`);
   }
   if(errors.length){for(const e of errors)console.error(`ERROR: ${e}`);console.error(`Exact promotion validation FAILED: ${errors.length} error(s).`);process.exit(1);}
-  console.log(`Exact promotion validation PASS: ${Object.keys(index.nodes??{}).length} runtime node(s), every admission has compliant independent evidence.`);
+  console.log(`Exact promotion validation PASS: ${Object.keys(index.nodes??{}).length} runtime node(s), every admission has compliant immutable independent evidence.`);
 }
 
 if(process.argv.includes('--self-test'))selfTest();else main();
