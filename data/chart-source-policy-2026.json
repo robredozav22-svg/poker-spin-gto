@@ -1,0 +1,65 @@
+{
+  "schema_version": "chart-source-policy-2026-v1",
+  "policy_year": 2026,
+  "goal": "MAXIMUM_CURRENT_ACCURACY_NOT_SOURCE_IMITATION",
+  "primary_baseline": {
+    "provider": "GTO Wizard",
+    "preferred_solution_family_order": ["Research", "General", "Simple"],
+    "disallowed_as_new_primary": ["Legacy", "Basic"],
+    "reason": "Research is preferred for preflop sizing study; current high-accuracy General/Simple are valid secondary primary-family baselines. Legacy/Basic must not seed new exact charts.",
+    "capture_requirement": "LIVE_NODE_CAPTURE_IN_2026",
+    "required_export_method": "FULL_NODE_UPI_PLUS_EVERY_ACTION_UPI"
+  },
+  "independent_cross_checks": [
+    {
+      "provider": "PreflopRanges.app",
+      "role": "INDEPENDENT_SOLVER_CROSSCHECK",
+      "allowed_for_exact_promotion": false,
+      "use": ["aggregate frequency comparison", "action-tree/sizing comparison", "hand-boundary anomaly detection"]
+    },
+    {
+      "provider": "GTOCharts.com",
+      "role": "SECONDARY_CURRENT_2026_REFERENCE",
+      "allowed_for_exact_promotion": false,
+      "use": ["format coverage check", "gross range anomaly detection"]
+    },
+    {
+      "provider": "user supplied screenshots",
+      "role": "HISTORICAL_VISUAL_CROSSCHECK",
+      "allowed_for_exact_promotion": false,
+      "use": ["tree identity crosscheck", "aggregate sanity check"]
+    }
+  ],
+  "promotion_gates": {
+    "require_exact_node_identity": true,
+    "require_exact_action_history": true,
+    "require_exact_action_sizes": true,
+    "require_169_hand_classes": true,
+    "require_explicit_zero_reach": true,
+    "require_no_interpolation": true,
+    "require_no_default_fold": true,
+    "require_live_2026_source_capture": true,
+    "require_internal_probability_conservation": true,
+    "require_independent_crosscheck": true,
+    "require_tree_compatibility_before_numeric_comparison": true,
+    "require_disagreement_classification": true
+  },
+  "disagreement_classes": [
+    "NONE",
+    "ROUNDING_ONLY",
+    "SOLVER_TOLERANCE",
+    "TREE_SIZING_MISMATCH",
+    "STACK_PROFILE_MISMATCH",
+    "PAYOUT_PROFILE_MISMATCH",
+    "ANTE_FORMAT_MISMATCH",
+    "SOURCE_VERSION_MISMATCH",
+    "UNEXPLAINED_NUMERIC_DISAGREEMENT"
+  ],
+  "hard_rules": [
+    "Never average strategies from different trees or sizing sets.",
+    "Never compare aggregate frequencies as accuracy evidence until format, stack, payout, ante, positions, history and legal sizings match.",
+    "A newer source does not automatically replace an older source if the game tree differs; it creates a distinct chart profile.",
+    "No chart may be labelled BEST_2026 or VERIFIED_EXACT from screenshot reconstruction, aggregate-only data or solver marketing claims.",
+    "Self-generated solver output remains ResearchOnly until its own independent numerical proof and exact real-node reach state are validated."
+  ]
+}
