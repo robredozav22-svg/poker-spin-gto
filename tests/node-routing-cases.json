@@ -1,0 +1,29 @@
+{
+  "cases": [
+    {
+      "stack": 15,
+      "history": [],
+      "expected": "15|"
+    },
+    {
+      "stack": 15,
+      "history": ["BTN:Raise 2"],
+      "expected": "15|BTN:Raise 2"
+    },
+    {
+      "stack": 15,
+      "history": ["BTN:Raise 2", "SB:Call"],
+      "expected": "15|BTN:Raise 2>SB:Call"
+    },
+    {
+      "stack": 15,
+      "history": ["BTN:Fold", "SB:Raise 3"],
+      "expected": "15|BTN:Fold>SB:Raise 3"
+    },
+    {
+      "stack": 2,
+      "mode": "HU",
+      "expected": "2|HU"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+name: Phase E Kuhn Validation
+
+on:
+  push:
+    branches: [chat-aligned-v2]
+    paths:
+      - 'solver-rs/src/kuhn_cfr.rs'
+      - 'solver-rs/src/bin/kuhn_cfr_smoke.rs'
+      - 'solver-rs/src/lib.rs'
+      - '.github/workflows/phase-e-kuhn.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  kuhn:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Kuhn unit tests
+        working-directory: solver-rs
+        run: cargo test --lib kuhn_cfr
+      - name: Run analytical Kuhn smoke
+        working-directory: solver-rs
+        run: cargo run --release --bin kuhn_cfr_smoke

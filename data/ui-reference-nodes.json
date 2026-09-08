@@ -1,0 +1,46 @@
+{
+  "schema_version": "1.0",
+  "source_role": "secondary_ui_and_aggregate_crosscheck",
+  "nodes": [
+    {
+      "mode": "3max",
+      "effective_stack_bb": 15,
+      "history": [],
+      "hero": "BTN",
+      "actions_pct": {"fold": 67.22, "raise_2": 25.41, "jam_15": 7.36},
+      "status": "SCREEN_CROSSCHECK"
+    },
+    {
+      "mode": "3max",
+      "effective_stack_bb": 15,
+      "history": ["BTN_RAISE_2"],
+      "hero": "SB",
+      "actions_pct": {"fold": 78.31, "call": 2.41, "jam_15": 19.27},
+      "status": "SCREEN_CROSSCHECK"
+    },
+    {
+      "mode": "3max",
+      "effective_stack_bb": 15,
+      "history": ["BTN_RAISE_2", "SB_CALL"],
+      "hero": "BB",
+      "actions_pct": {"fold": 59.11, "call": 22.19, "jam_15": 18.70},
+      "status": "SCREEN_CROSSCHECK"
+    },
+    {
+      "mode": "3max",
+      "effective_stack_bb": 15,
+      "history": ["BTN_FOLD", "SB_RAISE_3"],
+      "hero": "BB",
+      "actions_pct": {"fold": 47.12, "call": 33.85, "jam_15": 19.01},
+      "status": "SCREEN_CROSSCHECK"
+    },
+    {
+      "mode": "hu",
+      "effective_stack_bb": 2,
+      "history": [],
+      "hero": "BTN",
+      "actions_pct": {"fold": 57.16, "call": 0.03, "jam_2": 42.82},
+      "status": "HU_SCREEN_REFERENCE_ONLY"
+    }
+  ]
+}

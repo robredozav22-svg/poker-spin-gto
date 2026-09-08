@@ -1,0 +1,15 @@
+[package]
+name = "spins-solver-core"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "spins_solver_core"
+path = "src/lib.rs"
+
+[dependencies]
+sha2 = "0.10"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0",
+  "basis": "Recovered V41/V42 source audits",
+  "total_starting_combos": 1326,
+  "rfi_3max": [
+    {"stack_bb":8,"position":"BTN","grade":"B","action_combos":{"JAM":455,"FOLD":871}},
+    {"stack_bb":10,"position":"BTN","grade":"B","action_combos":{"JAM":353,"RAISE":99,"FOLD":874}},
+    {"stack_bb":15,"position":"BTN","grade":"B","action_combos":{"JAM":102,"RAISE":323,"FOLD":901}},
+    {"stack_bb":20,"position":"BTN","grade":"B","action_combos":{"RAISE":461,"FOLD":865}},
+    {"stack_bb":25,"position":"BTN","grade":"B","action_combos":{"RAISE":505,"FOLD":821}},
+    {"stack_bb":8,"position":"SB","grade":"B","action_combos":{"JAM":697,"RAISE":79,"LIMP":86,"FOLD":464}},
+    {"stack_bb":10,"position":"SB","grade":"B","action_combos":{"JAM":554,"RAISE":218,"LIMP":11,"FOLD":543}},
+    {"stack_bb":15,"position":"SB","grade":"B","action_combos":{"JAM":258,"RAISE":352,"LIMP":212,"FOLD":504}},
+    {"stack_bb":20,"position":"SB","grade":"B","action_combos":{"JAM":98,"RAISE":449,"LIMP":302,"FOLD":477}},
+    {"stack_bb":25,"position":"SB","grade":"B","action_combos":{"JAM":22,"RAISE":472,"LIMP":360,"FOLD":472}}
+  ],
+  "public_call_vs_jam": [
+    {"node":"3H_BB_VS_BTN_JAM_SB_FOLD","stack_bb":25,"grade":"A","combos":154,"pct":11.61,"range_text":"44+/A8s+/ATo+/KQ+","source":"PokerStars Learn"},
+    {"node":"3H_BB_VS_BTN_JAM_SB_FOLD","stack_bb":15,"grade":"A","combos":188,"pct":14.18,"range_text":"33+/A4s+/A8o+/JTs+","source":"PokerStars Learn"},
+    {"node":"3H_BB_VS_BTN_JAM_SB_FOLD","stack_bb":10,"grade":"A","combos":326,"pct":24.59,"range_text":"22+/A3o+/A2s+/K9s+/KTo+/QJo+/JTs+","source":"PokerStars Learn"},
+    {"node":"3H_SB_VS_BTN_JAM","stack_bb":25,"grade":"A","combos":114,"pct":8.60,"range_text":"44+/ATs+/A9o/KQo/KJs+","source":"PokerStars Learn"},
+    {"node":"3H_SB_VS_BTN_JAM","stack_bb":11,"grade":"A","combos":238,"pct":17.95,"range_text":"22+/A7o+/A4s+/KTs+/KJo+","source":"PokerStars Learn"},
+    {"node":"3H_BB_VS_SB_JAM_BTN_FOLD","stack_bb":25,"grade":"A","combos":164,"pct":12.37,"range_text":"33+/A6s+/ATo+/KTs+","source":"PokerStars Learn"},
+    {"node":"3H_BB_VS_SB_JAM_BTN_FOLD","stack_bb":15,"grade":"A","combos":254,"pct":19.16,"range_text":"22+/A2s+/A4o+/J9s+","source":"PokerStars Learn"},
+    {"node":"3H_BB_VS_SB_JAM_BTN_FOLD","stack_bb":10,"grade":"A","combos":422,"pct":31.83,"range_text":"22+/A2o+/A2s+/K2s+/K6o+/J8s+/JTo+","source":"PokerStars Learn"},
+    {"node":"HU_BB_VS_BTN_JAM","stack_bb":25,"grade":"A","combos":130,"pct":9.80,"range_text":"44+/ATo+/KQo+/QJs+","source":"PokerStars Learn"},
+    {"node":"HU_BB_VS_BTN_JAM","stack_bb":13,"grade":"A","combos":418,"pct":31.52,"range_text":"22+/A2o+/K6o+/K3s+/Q9o+/Q7s+/98s+","source":"PokerStars Learn"},
+    {"node":"HU_BB_VS_BTN_JAM","stack_bb":10,"grade":"A","combos":218,"pct":16.44,"range_text":"22+/A2s+/K9o+/K7s+/JTo+/J9s+","source":"PokerStars Learn"}
+  ],
+  "invariants": {
+    "rfi_action_combo_sum_must_equal": 1326,
+    "no_suited_over_offsuit_call_violation": true,
+    "no_silent_stack_interpolation": true,
+    "mixed_source_cells_must_remain_mixed": true,
+    "grade_B_is_not_exact_per_hand_solver_frequency": true
+  }
+}
