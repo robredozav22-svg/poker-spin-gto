@@ -10,6 +10,7 @@ on:
       - 'scripts/validate-chart-data.mjs'
       - 'scripts/validate-exact-spin-nodes.mjs'
       - 'scripts/import-gtowizard-upi-node.mjs'
+      - 'scripts/test-gtowizard-upi-zero-reach.mjs'
       - 'scripts/validate-benchmark-manifest.mjs'
       - '.github/workflows/chart-audit.yml'
   workflow_dispatch:
@@ -32,6 +33,8 @@ jobs:
         run: node scripts/validate-chart-data.mjs
       - name: Self-test GTO Wizard exact importer
         run: node scripts/import-gtowizard-upi-node.mjs --self-test
+      - name: Verify zero-reach hands remain unreachable
+        run: node scripts/test-gtowizard-upi-zero-reach.mjs
       - name: Validate exact Spin nodes
         run: node scripts/validate-exact-spin-nodes.mjs
       - name: Validate benchmark manifests
