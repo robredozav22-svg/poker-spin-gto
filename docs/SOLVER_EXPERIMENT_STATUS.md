@@ -1,191 +1,209 @@
 # Solver Experiment Status
 
-Date: 2026-09-07
+Date: 2026-09-08
 
-All values below are research diagnostics. No self-generated 3-max result is approved as production chart data.
+All self-generated values remain research diagnostics unless explicitly tied to a real source-bound Spin node and promoted through the exact-data gates.
 
-## Promotion gate
+## Global promotion principle
 
-A numerical stability run may proceed to deeper validation only if:
+Passing a numerical solver gate proves only the modeled game. A user-facing exact Spin chart additionally requires:
 
-- relevant root action-frequency delta across independent runs <= 0.50 percentage points;
-- maximum node combo-weighted action MAE <= 2.00 percentage points;
-- 1326 -> 169 aggregation shows acceptably small suit-variant dispersion;
-- measured exploitability / best-response diagnostics pass for the modeled game;
-- model/tree assumptions match the target Spin node;
-- external references are used only as holdout validation, never as solver training labels.
+- live 2026 source/node identity;
+- exact stack/payout/ante/action-tree/sizing profile;
+- complete 1326-combo reach and action conservation;
+- 169-class aggregation with explicit zero-reach hands;
+- independent cross-check on a compatible tree;
+- discrepancy classification;
+- runtime exact-index admission.
 
-Passing these gates proves only numerical stability inside the modeled game. It does not by itself prove full Spin GTO correctness.
+External sources are validation references, never solver training labels.
 
 ## Rejected Python 3-max experiments
 
-### A — naive chance-sampled CFR
-Status: REJECTED / ARCHIVED.
-- root BTN jam delta about 2.86pp across runs;
-- internal combo-weighted differences reached about 26.7pp.
+A naive sampled CFR, stratified external-sampling MCCFR, DCFR variant and frozen blocker-aware corpus all failed stability/accuracy diagnostics by large margins. They remain archived and cannot produce chart data.
 
-### B — stratified external-sampling MCCFR
-Status: REJECTED / ARCHIVED.
-- BTN jam roughly 48.26% vs 40.12%;
-- root delta about 8.15pp;
-- maximum internal combo-weighted difference about 28.72pp.
+Representative failures included root action deltas above 3–8pp, combo-weighted node MAE above 15pp, and fixed-corpus 300-sweep BTN jam 45.35% vs an independent 8bb checkpoint near 34.31%.
 
-### C — stratified DCFR
-Status: REJECTED / ARCHIVED.
-- root delta 3.609pp;
-- maximum node combo-weighted MAE 15.812%;
-- BTN jam about +11.540pp vs the 8bb validation anchor.
+## Rust exact all-in foundation
 
-### D — frozen blocker-aware corpus + full opponent-action enumeration
-Status: REJECTED / ARCHIVED.
-- BTN jam run A 45.7849%;
-- BTN jam run B 51.8986%;
-- root delta 6.1136pp;
-- maximum node combo-weighted MAE 46.7518%;
-- maximum individual hand delta 99.3518pp;
-- 300-sweep BTN jam 45.3499% vs reference 34.3137% (+11.0362pp).
+Implemented and CI-tested:
 
-Decision: do not scale these Python approaches. Archived benchmark workflows are manual-only.
-
-## Active direction — Rust combo-level solver core
-
-Status: RESEARCH_ONLY.
-
-Implemented:
 - exact 52-card / 1326-combo representation;
-- blocker compatibility bitsets;
-- exact joint three-player card removal;
-- normalized combo ranges and blocker-conditioned ranges;
-- self-contained direct 5/7-card Hold'em evaluator;
-- direct seven-card evaluator validated against the 21-subset brute-force oracle on 20,000 deterministic seven-card hands;
-- deterministic HU common-board equity sampling with suit-isomorphic cache;
-- genuine three-way common-board equity sampling with canonical cache;
-- exact HU preflop equity enumeration over all C(48,5)=1,712,304 boards;
-- exact HU suit-canonical payoff cache;
-- HU range-equity integration;
-- joint three-way range-equity integration with mutually compatible opponent hands only;
-- zero-sum terminal settlement, dead blinds and unmatched-jam returns;
-- HU and three-way equity -> chip-EV settlement;
-- vector regret matching;
-- CFR+ floor;
-- DCFR discount primitive;
-- action-value regret updates with separate own/opponent reach weights;
-- Bayesian P(hand | action) range updates;
-- hero-card-conditioned P(action | hero cards) and conditional action ranges;
-- zero-probability action handling without inventing a range;
-- BB Fold/Call EV vs SB jam and BTN jam;
-- genuine three-way BB Fold/Call leaf after BTN jam + SB call;
-- SB Fold/Jam EV against the blocker-conditioned current BB response strategy;
-- coupled restricted learner for `BTN folds -> SB Fold/Jam -> BB Fold/Call`;
-- exact-payoff version of that restricted learner with all HU showdown payoffs precomputed once;
-- exact restricted best-response / NashConv evaluator;
-- BB counterfactual regret weighted by exact `P(SB Jam | BB cards)`;
-- strategy stability metrics: max action delta and prior-weighted MAE;
-- 1326 -> 169 aggregation with suit-variant dispersion retained as an audit signal;
-- deduplicated Rust CI so one relevant push creates one Rust test run.
+- blocker compatibility and exact multi-player card removal;
+- direct 7-card Hold'em evaluator, cross-checked against brute-force 21-subset oracle on 20,000 deterministic hands;
+- exact HU preflop equity over C(48,5)=1,712,304 boards;
+- exact 3-way preflop equity over C(46,5)=1,370,754 boards;
+- exact HU and 3-way range integration;
+- exact all-in chip-EV terminal settlement;
+- canonical exact caches;
+- sampled equity retained only for research/cross-check paths.
 
-## Exact HU equity milestone
+Exact HU AA vs KK smoke:
+- AA equity 0.812554897;
+- KK equity 0.187445103;
+- 1,712,304 boards;
+- zero-sum error 0.
 
-`exact_hu_equity()` enumerates every legal five-card board after two fixed two-card hands.
+Exact 3-way AA/KK/QQ smoke:
+- equities 0.665054415 / 0.188754510 / 0.146191074;
+- 1,370,754 boards;
+- three-way ties 5,448;
+- zero-sum error about 1.15e-13.
 
-Measured CI smoke test, AA vs KK:
-- boards: 1,712,304;
-- AA equity: 0.812554897;
-- KK equity: 0.187445103;
-- AA wins: 1,388,072;
-- KK wins: 317,694;
-- ties: 6,538;
-- zero-sum error: 0;
-- runtime after release compilation: approximately 0.23 seconds for one complete matchup on the GitHub runner.
+## Exact restricted preflop strategic milestone
 
-Conclusion: Monte Carlo is no longer required for HU all-in terminal payoffs. Exact HU equity is the canonical direction for those leaves.
+Restricted diagnostic game:
 
-## Exact restricted subgame milestone
+`BTN folds -> SB [Fold, Jam] -> BB [Fold, Call]`
 
-The first exact coupled strategic subsystem is:
+Sparse exact support reaches NashConv 0.001778596 bb at 10,000 sweeps. This validates regret/reach/averaging mechanics for that restricted exact-payoff game only. Its frequencies are not Spin charts.
 
-`BTN folds -> SB [Fold, Jam] -> BB [Fold, Call]`.
+## Real Hold'em river CFR milestone
 
-For the sparse deterministic validation support:
-- SB: AA, A5s, 76s;
-- BB: KK, AQo, 65s;
-- six legal private-hand pairs after exact card removal;
-- exact HU equity is precomputed once for each canonical legal matchup;
-- CFR sweeps then use the fixed exact payoff matrix with no equity sampling noise.
+A fixed-range river game now uses:
 
-Exact NashConv progression:
-- sweep 1: 1.351545831 bb;
-- sweep 50: 0.040246151 bb;
-- sweep 100: 0.029302555 bb;
-- sweep 200: 0.015213324 bb;
-- sweep 500: 0.009025857 bb;
-- sweep 1,000: 0.006427089 bb;
-- sweep 2,000: 0.004349300 bb;
-- sweep 5,000: 0.002590215 bb;
-- sweep 10,000: 0.001778596 bb.
+- real Hold'em private cards;
+- exact blockers;
+- exact 7-card evaluator;
+- independent brute-force best response;
+- cached showdown outcomes.
 
-At 10,000 sweeps:
-- average SB jam: 0.587024326;
-- average BB call: 0.360426620;
-- SB best-response gain: 0.001187979 bb;
-- BB best-response gain: 0.000590617 bb;
-- exact NashConv: 0.001778596 bb;
-- SB game value: 0.060849760 bb.
+Strict 4,000,000-iteration gate:
+- NashConv 0.000441128420 bb;
+- fixed threshold 0.000600000000 bb;
+- PASS.
 
-Interpretation:
-- NashConv continues decreasing once Monte Carlo payoff noise is removed;
-- this strongly validates the regret/reach/averaging mechanics for the modeled restricted game;
-- it does NOT validate the full Spin action tree;
-- these sparse frequencies are diagnostics only and are not chart data.
+## Exact turn -> river chance layer
 
-## Sampled-vs-exact finding
+For every legal fixed private-hand pair on the turn:
 
-With 10,000-board training equity and independent 50,000-board holdout equity at 1,000 sweeps:
-- train NashConv: 0.006012 bb;
-- holdout NashConv: 0.010583 bb;
-- gap: 0.004571 bb.
+- exactly 44 unseen river cards are enumerated;
+- chance mass is exactly normalized;
+- aggregated river-child evaluation is cross-checked against independent state-first enumeration.
 
-The exact-payoff game removes that train/holdout equity sampling distinction entirely and continues below that noise floor. Conclusion: all-in payoff sampling was a material convergence bottleneck.
+Research fixture:
+- 16 legal private-state pairs;
+- 704 exact transitions;
+- 48 distinct river children;
+- checkdown cross-check difference 0.
 
-## Next mathematical sequence
+## Two-street Hold'em CFR milestone
 
-1. benchmark exact three-way preflop equity for one fixed three-hand matchup;
-2. if runtime is practical, make exact 3-way equity/cache canonical for three-way all-in terminals;
-3. replace sampled 3-way terminal leaves such as `BTN jam -> SB call -> BB call` with exact payoff operators;
-4. retain sampled equity only as a cross-check/research path;
-5. add synthetic precomputed-payoff games to test regret/reach logic independently from poker evaluation;
-6. design canonical matchup-class precomputation before any full 1326-support exact solve;
-7. expand beyond push/fold only after exact all-in terminal math is stable;
-8. non-all-in leaves require measured postflop continuation EV, never raw-equity substitution.
+The restricted two-street game models:
 
-## 1326 -> 169 chart policy
+turn decision -> exact 44-card river chance -> river decision
 
-A 169-cell display is derived from the 1326-combo strategy only after aggregation.
+A critical modeling error was found and fixed: river infosets must include the public turn action history. `check-check`, `bet-call` and `check-bet-call` are separate public states because they imply different reach ranges and pot sizes.
 
-For every hand class we retain:
-- action-frequency mean;
-- exact combo count (pair 6, suited 4, offsuit 12);
-- maximum deviation of any suit variant from the class mean.
+Before the fix, independent NashConv was about 2.2603 bb. After separating the three public histories it fell to about 0.02082 bb at only 25k iterations.
 
-Large suit dispersion blocks promotion. The UI must not hide noisy combo strategies behind a clean-looking 169-cell average.
+Showdown outcomes are precomputed once, removing repeated 7-card evaluation from the CFR hot loop.
 
-## Postflop backend status
+Vanilla CFR convergence on the same exact fixture:
+- 25k: 0.0208214 bb;
+- 100k: 0.00838977 bb;
+- 400k: 0.00431132 bb;
+- 1.6M: 0.001766543297 bb.
 
-Compatibility CI already successfully:
-- checked out the MIT postflop solver source;
-- built its Rust CLI;
-- solved a fixture from scratch;
-- read measured exploitability and strategy data with the strict parser;
-- passed reader regression tests.
+The final 1.6M gate threshold was fixed in advance at <= 0.0025 bb and passed.
 
-Current blocker:
-- the persisted solution format inspected so far does not export the per-combo EV arrays needed for preflop continuation values.
+CFR+ with linear averaging was tested but not selected:
+- 100k CFR+: about 0.01661569 bb;
+- 400k CFR+: about 0.00829956 bb;
+- vanilla was materially better at equal iteration counts on this fixture.
 
-Required extension:
-- export per-combo EV at relevant root/leaf states while retaining measured exploitability, config and combo labels.
+Therefore the current selected research engine for this layer is vanilla CFR. CFR+ remains research-only.
 
-Non-all-in preflop leaves must use measured continuation EV. Raw equity is not an acceptable replacement.
+## Range-bound continuation proof
 
-## Policy
+A numerical PASS alone cannot create `VERIFIED_MEASURED` continuation data.
 
-Wizard, GTO Ranges+, public charts and supplied screenshots are independent validation references only. They can reveal game-tree mismatch or numerical failure, but are not solver training labels.
+The proof object now requires:
+
+- immutable SHA-256 `range_state_id`;
+- strategy SHA-256 checksum;
+- algorithm and iteration count;
+- measured NashConv and precommitted threshold;
+- exact river-chance flag;
+- exact Hold'em evaluator flag;
+- independent best-response flag;
+- complete state coverage.
+
+Research fixture evidence is persisted in:
+
+`data/solver-evidence/turn-river-research-fixture-v1.json`
+
+It has `range_exact_ready=true` for that synthetic fixture but `generic_exact_ready=false` and is explicitly forbidden as a real Spin chart.
+
+## 2026 external chart policy
+
+Current primary external baseline priority:
+
+1. GTO Wizard Research for preflop sizing/tree discovery when available;
+2. current GTO Wizard General;
+3. current GTO Wizard Simple;
+4. Legacy/Basic only as historical references.
+
+A new exact chart must be captured from a live 2026 node. CI rejects non-2026 exact captures and rejects GTO Wizard Legacy/Basic as new primary exact sources.
+
+Current independent references include PreflopRanges.app and GTOCharts.com. They are cross-checks only unless full solver/node provenance and lossless exact frequencies become available.
+
+Observed 15bb public mismatch demonstrates why trees must never be averaged:
+
+- current independent BTN first-in reference: Fold 67.9%, Raise 2bb 24.4%, Jam 7.7%;
+- historical project screenshot: Fold 67.22%, Raise 2bb 25.41%, Jam 7.36%;
+- current independent SB after BTN fold: Fold 38%, Raise 2.2bb 26.5%, Limp 16%, Jam 19.5%.
+
+The SB profile clearly differs from historical screenshot tree assumptions. This is classified as TREE/SIZING MISMATCH, not averaged into a synthetic strategy.
+
+See:
+- `docs/SOURCE_AUDIT_2026.md`
+- `data/chart-source-policy-2026.json`
+
+## Exact GTO Wizard import path
+
+GTO Wizard allows copying the full node range and ranges for individual actions in standard UPI/Pio/GTO+ text format.
+
+The importer:
+
+`scripts/import-gtowizard-upi-node.mjs`
+
+requires lossless conservation:
+
+`sum(action range weight for combo) == full node range weight for combo`
+
+and derives:
+
+`P(action | combo) = action_weight(combo) / full_range_weight(combo)`.
+
+It checks all 1326 physical combos, preflop suit symmetry and converts to 169 classes.
+
+Zero-reach hands are preserved as:
+
+`range_weight: 0, strategy: null`
+
+They are never defaulted to Fold. A dedicated CI test protects this rule.
+
+## Runtime chart safety
+
+V46 runtime uses `data/charts/exact-index.json` plus `ui/exact-store.js`.
+
+Only indexed `VERIFIED_EXACT` nodes can paint the 13x13 grid or unlock TRAIN. Screenshot aggregates, public anchors and solver research evidence cannot enter the exact renderer.
+
+The runtime index is intentionally empty until the first live 2026 exact node passes all gates.
+
+## Immediate next sequence
+
+1. capture live 2026 GTO Wizard 15bb BTN first-in from preferred current solution family;
+2. capture full node UPI plus every action UPI and exact node/sizing metadata;
+3. import -> 1326 conservation -> 169 exact matrix;
+4. compare aggregates and hand boundaries against compatible independent current references;
+5. classify any mismatch before promotion;
+6. admit the first node to `exact-index.json` only after PASS;
+7. repeat for SB/BB response nodes without generic defend/3bet shortcuts;
+8. derive real reach states for non-all-in branches and run validated continuation solver proofs where necessary;
+9. only after sufficient exact-node coverage consider a `BEST_2026` claim.
+
+## Non-negotiable rule
+
+We do not claim to be more accurate than GTO Wizard merely because our frequencies differ. We claim improvement only when the same game tree/profile is compared and stronger measured evidence supports it.
