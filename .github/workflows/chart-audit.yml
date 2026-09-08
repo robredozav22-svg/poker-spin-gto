@@ -13,6 +13,7 @@ on:
       - 'scripts/validate-exact-spin-nodes.mjs'
       - 'scripts/validate-exact-index.cjs'
       - 'scripts/validate-exact-promotion.cjs'
+      - 'scripts/validate-crosscheck-profiles.mjs'
       - 'scripts/build-exact-index-entry.cjs'
       - 'scripts/import-gtowizard-upi-node.mjs'
       - 'scripts/test-gtowizard-upi-zero-reach.mjs'
@@ -39,6 +40,8 @@ jobs:
           node-version: '22'
       - name: Validate chart data
         run: node scripts/validate-chart-data.mjs
+      - name: Validate 2026 cross-check provenance and source usage
+        run: node scripts/validate-crosscheck-profiles.mjs
       - name: Self-test GTO Wizard exact importer
         run: node scripts/import-gtowizard-upi-node.mjs --self-test
       - name: Verify zero-reach hands remain unreachable
