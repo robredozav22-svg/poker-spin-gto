@@ -1,0 +1,38 @@
+{
+  "schema_version": "chart-coverage-targets-v1",
+  "format": "SPIN_3MAX",
+  "payout_profile": "WTA_CHIPEV_BASELINE",
+  "ante_profile": "NONE",
+  "ui_effective_stacks_bb": [2,4,6,8,10,12,15,17,20,23,25],
+  "no_interpolation": true,
+  "priority_order": [
+    "P0_15BB_FULL_TREE",
+    "P1_PUBLIC_STACK_ROOTS",
+    "P2_MISSING_UI_STACK_ROOTS",
+    "P3_RESPONSE_TREES_OTHER_STACKS",
+    "P4_HU_AND_HIGH_MULTIPLIER_ICM_SEPARATE_PROFILES"
+  ],
+  "opening_nodes": [
+    {"stack_bb":2,"positions":["BTN","SB"],"status":"MISSING_EXACT"},
+    {"stack_bb":4,"positions":["BTN","SB"],"status":"MISSING_EXACT"},
+    {"stack_bb":6,"positions":["BTN","SB"],"status":"MISSING_EXACT"},
+    {"stack_bb":8,"positions":["BTN","SB"],"status":"CURRENT_2026_CROSSCHECK_AVAILABLE_EXACT_MISSING"},
+    {"stack_bb":10,"positions":["BTN","SB"],"status":"CURRENT_2026_CROSSCHECK_AVAILABLE_EXACT_MISSING"},
+    {"stack_bb":12,"positions":["BTN","SB"],"status":"MISSING_EXACT_NO_INTERPOLATION"},
+    {"stack_bb":15,"positions":["BTN","SB"],"status":"P0_CURRENT_2026_CROSSCHECK_AVAILABLE_EXACT_MISSING"},
+    {"stack_bb":17,"positions":["BTN","SB"],"status":"MISSING_EXACT_NO_INTERPOLATION"},
+    {"stack_bb":20,"positions":["BTN","SB"],"status":"CURRENT_2026_CROSSCHECK_AVAILABLE_EXACT_MISSING"},
+    {"stack_bb":23,"positions":["BTN","SB"],"status":"MISSING_EXACT_NO_INTERPOLATION"},
+    {"stack_bb":25,"positions":["BTN","SB"],"status":"CURRENT_2026_CROSSCHECK_AVAILABLE_EXACT_MISSING"}
+  ],
+  "response_tree_policy": {
+    "first_full_tree_stack_bb": 15,
+    "registry": "data/charts/15bb-node-registry.json",
+    "rule": "Every distinct public action history and sizing is a distinct node. Generic defend/3bet charts are forbidden."
+  },
+  "separate_profiles": [
+    "SPIN_HU",
+    "SPIN_PLUS_ANTE",
+    "HIGH_MULTIPLIER_ICM"
+  ]
+}

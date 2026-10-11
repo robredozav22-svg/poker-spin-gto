@@ -1,0 +1,79 @@
+{
+  "schema_version": "spin-crosscheck-profile-v1",
+  "captured_at": "2026-09-08T07:23:00Z",
+  "source": {
+    "provider": "PreflopRanges.app",
+    "role": "INDEPENDENT_SOLVER_CROSSCHECK",
+    "usage_policy": "LIMITED_PUBLIC_SPOT_CHECKS_ONLY_NO_SCRAPING_OR_BULK_EXTRACTION",
+    "terms_checked_at": "2026-09-08T08:35:00Z",
+    "urls": [
+      "https://preflopranges.app/charts/spins/15bb",
+      "https://preflopranges.app/charts/spins/btn-open-15bb",
+      "https://preflopranges.app/charts/spins/sb-open-15bb",
+      "https://preflopranges.app/"
+    ]
+  },
+  "format": "SPIN_3MAX",
+  "effective_stack_bb": 15,
+  "payout_profile": "UNRESOLVED_PUBLIC_SOURCE",
+  "ante_profile": "UNRESOLVED_PUBLIC_SOURCE",
+  "nodes": [
+    {
+      "id": "preflopranges-15bb-btn-first-in",
+      "hero_position": "BTN",
+      "history": [],
+      "actions": [
+        {"id": "FOLD", "type": "FOLD"},
+        {"id": "RAISE_TO_2BB", "type": "RAISE", "to_bb": 2},
+        {"id": "JAM_TO_15BB", "type": "JAM", "to_bb": 15}
+      ],
+      "aggregate": {
+        "FOLD": 0.679,
+        "RAISE_TO_2BB": 0.244,
+        "JAM_TO_15BB": 0.077
+      },
+      "public_text_ranges": {
+        "pure_open_100pct": "22+, A3s+, K5s+, Q7s+, J8s+, T7s+, 97s+, 87s+, A6o+, K9o+, QTo+, JTo+",
+        "open_50pct_plus": "22+, A2s+, K5s+, Q7s+, J8s+, T7s+, 97s+, 86s+, 76s+, A5o+, K9o+, QTo+, JTo+, T9o+"
+      }
+    },
+    {
+      "id": "preflopranges-15bb-sb-first-in",
+      "hero_position": "SB",
+      "history": [{"actor": "BTN", "type": "FOLD"}],
+      "actions": [
+        {"id": "FOLD", "type": "FOLD"},
+        {"id": "RAISE_TO_2_2BB", "type": "RAISE", "to_bb": 2.2},
+        {"id": "LIMP", "type": "LIMP"},
+        {"id": "JAM_TO_15BB", "type": "JAM", "to_bb": 15}
+      ],
+      "aggregate": {
+        "FOLD": 0.38,
+        "RAISE_TO_2_2BB": 0.265,
+        "LIMP": 0.16,
+        "JAM_TO_15BB": 0.195
+      },
+      "public_text_ranges": {
+        "pure_open_100pct": "44-22, TT+, AQs+, K9s+, QTs, JTs+, T9s+, T7s, T4s, 97s+, 86s+, 76s+, AJo-A2o, KJo, K7o",
+        "open_50pct_plus": "55-22, 77+, AQs+, A8s-A4s, A2s, K8s+, K6s-K3s, QTs+, Q7s-Q3s, J3s+, T6s+, T4s, 95s+, 85s+, 74s+, 63s+, 53s+, 43s+, A2o+, K5o+, Q8o+, J8o+, T8o+, 97o+, 87o+"
+      },
+      "hand_spot_checks": {
+        "AKo": {
+          "FOLD": 0.0,
+          "LIMP": 0.42,
+          "RAISE_TO_2_2BB": 0.30,
+          "JAM_TO_15BB": 0.28,
+          "source_surface": "PUBLIC_VIEWER_PINNED_HAND",
+          "precision": "DISPLAYED_INTEGER_PERCENT"
+        }
+      }
+    }
+  ],
+  "promotion_use": "CROSSCHECK_ONLY",
+  "notes": [
+    "Public source does not expose enough payout/ante/solver provenance for VERIFIED_EXACT promotion.",
+    "Numeric comparison is valid only after format, payout, ante, stack, action history and legal sizing compatibility are resolved.",
+    "Stored hand-level data is limited to a small public spot check; no bulk extraction is performed.",
+    "Do not average this profile with a different tree."
+  ]
+}

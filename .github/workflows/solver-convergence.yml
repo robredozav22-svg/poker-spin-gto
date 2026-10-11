@@ -1,0 +1,59 @@
+name: Solver Convergence
+
+on:
+  push:
+    branches: [chat-aligned-v2]
+    paths:
+      - '.github/workflows/solver-convergence.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hu-2bb-convergence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: 100k-seed-a
+            iterations: 100000
+            seed: 20260906
+            diagnostics: 50000
+          - label: 300k-seed-b
+            iterations: 300000
+            seed: 20260907
+            diagnostics: 100000
+          - label: 300k-seed-c
+            iterations: 300000
+            seed: 20260908
+            diagnostics: 100000
+          - label: 500k-seed-d
+            iterations: 500000
+            seed: 20260909
+            diagnostics: 100000
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Solve
+        run: |
+          mkdir -p solver/output
+          python -m solver.run_hu_mccfr \
+            --stack 2 \
+            --iterations ${{ matrix.iterations }} \
+            --seed ${{ matrix.seed }} \
+            --diagnostic-samples ${{ matrix.diagnostics }} \
+            --output solver/output/hu-2bb-${{ matrix.label }}.json
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: hu-2bb-${{ matrix.label }}
+          path: solver/output/hu-2bb-${{ matrix.label }}.json
+          if-no-files-found: error
+          retention-days: 7

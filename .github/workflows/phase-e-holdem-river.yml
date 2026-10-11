@@ -1,0 +1,35 @@
+name: Phase E Holdem River Validation
+
+on:
+  push:
+    branches: [chat-aligned-v2]
+    paths:
+      - 'solver-rs/src/holdem_river_cfr.rs'
+      - 'solver-rs/src/bin/holdem_river_cfr_smoke.rs'
+      - 'solver-rs/src/evaluator.rs'
+      - 'solver-rs/src/cards.rs'
+      - 'solver-rs/src/lib.rs'
+      - '.github/workflows/phase-e-holdem-river.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: phase-e-holdem-river-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  river:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run river structural tests only
+        working-directory: solver-rs
+        run: |
+          cargo test --lib holdem_river_cfr::tests::river_fixture_has_normalized_legal_joint_distribution
+          cargo test --lib holdem_river_cfr::tests::board_overlap_is_rejected
+      - name: Run optimized Holdem river CFR and independent BR smoke
+        working-directory: solver-rs
+        run: cargo run --release --bin holdem_river_cfr_smoke

@@ -1,0 +1,40 @@
+name: Solver Smoke
+
+on:
+  push:
+    branches: [chat-aligned-v2]
+    paths:
+      - 'solver/**'
+      - 'tests/**'
+      - '.github/workflows/solver-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  hu-2bb:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Generate 2bb HU chart from our own chance-sampled solver
+        run: |
+          mkdir -p solver/output
+          python -m solver.run_hu_mccfr --stack 2 --iterations 100000 --seed 20260906 --output solver/output/hu-2bb-mccfr.json
+      - name: Upload solver result
+        uses: actions/upload-artifact@v4
+        with:
+          name: hu-2bb-mccfr
+          path: solver/output/hu-2bb-mccfr.json
+          if-no-files-found: error
+          retention-days: 7

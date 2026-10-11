@@ -1,0 +1,36 @@
+name: Phase D Tree Schema
+
+on:
+  push:
+    branches: [chat-aligned-v2]
+    paths:
+      - 'solver-rs/src/preflop_tree.rs'
+      - 'solver-rs/src/reference_tree_15bb.rs'
+      - 'solver-rs/src/tree_profile.rs'
+      - 'solver-rs/src/tree_catalog.rs'
+      - 'solver-rs/src/strategy_record.rs'
+      - 'solver-rs/src/strategy_compare.rs'
+      - 'solver-rs/src/continuation_registry.rs'
+      - 'solver-rs/src/solver_evidence.rs'
+      - 'solver-rs/src/accuracy_policy.rs'
+      - 'solver-rs/src/benchmark_claim.rs'
+      - 'solver-rs/src/independent_exact_eval.rs'
+      - 'solver-rs/src/lib.rs'
+      - '.github/workflows/phase-d-schema.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  schema:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run library tests
+        working-directory: solver-rs
+        run: cargo test --lib
+      - name: Check all solver binaries compile
+        working-directory: solver-rs
+        run: cargo check --bins

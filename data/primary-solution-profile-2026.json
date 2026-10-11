@@ -1,0 +1,66 @@
+{
+  "schema_version": "primary-spin-solution-profile-2026-v1",
+  "policy_year": 2026,
+  "primary_profile": {
+    "format": "SPIN_3MAX",
+    "spin_variant": "REGULAR",
+    "player_count": 3,
+    "payout_profile": "WTA_CHIPEV_BASELINE",
+    "ante_profile": "NONE",
+    "initial_priority_stack_bb": 15,
+    "stack_shape": "SYMMETRIC",
+    "exact_stacks_bb": {"BTN": 15, "SB": 15, "BB": 15},
+    "primary_provider": "GTO Wizard",
+    "preferred_solution_family_order": ["Research", "General", "Simple"],
+    "preferred_preflop_tree_mode": "RESEARCH_OPTIMAL_SIZING",
+    "require_every_legal_action_and_size": true,
+    "require_live_2026_capture": true
+  },
+  "separate_profiles": [
+    {
+      "name": "SPIN_PLUS_ANTE",
+      "reason": "Different forced ante structure; GTO Wizard describes Spin+Ante as a distinct solution family with per-player ante. Never share canonical routes or charts with Regular Spin."
+    },
+    {
+      "name": "HIGH_MULTIPLIER_ICM",
+      "reason": "When 2nd/3rd receive prizes, ICM is present. Never use WTA/ChipEV charts for these payout profiles."
+    },
+    {
+      "name": "ASYMMETRIC_STACKS",
+      "reason": "A single effective-stack label is not sufficient to identify solver strategy when the three seat stacks differ. Store exact BTN/SB/BB stacks in source metadata for asymmetric libraries."
+    },
+    {
+      "name": "SPIN_HU",
+      "reason": "Heads-up is a distinct player-count/action-tree profile."
+    }
+  ],
+  "source_evidence": [
+    {
+      "provider": "GTO Wizard",
+      "url": "https://blog.gtowizard.com/an-introduction-to-spin-gos/",
+      "supports": "Lower multipliers are winner-take-all; high multipliers paying 2nd/3rd introduce ICM."
+    },
+    {
+      "provider": "GTO Wizard",
+      "url": "https://blog.gtowizard.com/how-payout-structures-impact-icm/",
+      "supports": "Winner-take-all tournament is essentially a chip-EV contest / bubble factor 1."
+    },
+    {
+      "provider": "GTO Wizard",
+      "url": "https://blog.gtowizard.com/new-spins-solutions-study-plans-and-ev-comparison/",
+      "supports": "Regular and Spin+Ante are separate; Spin+Ante uses 0.17bb ante/player in the announced family; current high-accuracy General/Simple trees replace legacy solutions."
+    },
+    {
+      "provider": "GTO Wizard",
+      "url": "https://blog.gtowizard.com/introducing-gto-wizard-ai-heads-up-preflop-solver/",
+      "supports": "Regular Spin supports Research/General/Simple; Research is intended for optimal preflop sizing study; regular Spin study extends deeper than the old 25bb library."
+    }
+  ],
+  "capture_rejection_rules": [
+    "Reject Spin+Ante capture when primary profile expects ante NONE.",
+    "Reject high-multiplier/ICM capture when primary profile expects WTA_CHIPEV_BASELINE.",
+    "Reject asymmetric-stack capture unless exact BTN/SB/BB stacks are represented by a dedicated asymmetric profile.",
+    "Reject Legacy/Basic as a new 2026 primary source.",
+    "Reject a capture that omits any legal preflop action or exact sizing present in the selected Research node."
+  ]
+}

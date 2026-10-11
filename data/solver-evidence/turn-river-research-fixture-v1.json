@@ -1,0 +1,53 @@
+{
+  "schema_version": "solver-evidence-v1",
+  "artifact_id": "turn-river-research-fixture-v1",
+  "status": "RESEARCH_ONLY_FIXTURE",
+  "scope": "RANGE_CONDITIONED",
+  "may_be_used_as_real_spin_chart": false,
+  "generic_exact_ready": false,
+  "range_exact_ready": true,
+  "range_context": "RESEARCH_FIXTURE_TURN_RIVER_V1",
+  "range_state_id": "sha256:2cf6e53043a46e3de771caf7176bee7c3f2611f42942f1f9aee4d2e012a55c43",
+  "strategy_checksum": "sha256:a58cdf5016acdaf80dd277379bd7a8a4fbbc65e8e48a156c8d7ad010962869aa",
+  "solver": {
+    "algorithm": "VANILLA_CFR",
+    "iterations": 1600000,
+    "turn_public_histories": 3,
+    "joint_private_states": 9,
+    "raw_river_transitions": 396,
+    "showdown_cache": true
+  },
+  "measurement": {
+    "trained_p0_value_bb": -1.140776632979,
+    "p0_best_response_value_bb": -1.139994454638,
+    "p0_value_vs_p1_best_response_bb": -1.141760997935,
+    "p0_br_gain_bb": 0.000782178341,
+    "p1_br_gain_bb": 0.000984364956,
+    "nashconv_bb": 0.001766543297,
+    "max_nashconv_bb": 0.0025,
+    "threshold_pass": true
+  },
+  "integrity": {
+    "exact_checkdown_value_bb": 0.151891586674,
+    "checkdown_abs_diff": 0.0,
+    "deterministic_replay_abs_diff": 0.0,
+    "exact_river_chance": "PASS",
+    "exact_holdem_evaluator": "PASS",
+    "independent_two_street_best_response": "PASS",
+    "continuation_proof_tests": "PASS"
+  },
+  "provenance": {
+    "repository": "robredozav22-svg/poker-spin-gto",
+    "branch": "chat-aligned-v2",
+    "validated_commit": "654b1e6c349284fd83e7a3ebab3410791eece810",
+    "workflow": "Phase E Holdem Turn River Validation",
+    "workflow_run_id": 34188162339,
+    "workflow_job_id": 101940621275,
+    "validated_at_utc": "2026-09-08T04:49:07Z"
+  },
+  "limitations": [
+    "This evidence is for a synthetic research fixture, not a production Spin & Go range.",
+    "It must not be rendered as a user-facing 15 BB strategy chart.",
+    "A real continuation requires the exact preflop-derived reach ranges for the specific action-history node and a new range_state_id/checksum/measurement proof."
+  ]
+}

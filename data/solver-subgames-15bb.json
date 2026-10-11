@@ -1,0 +1,74 @@
+{
+  "schema_version": "1.0",
+  "mode": "spin_3max_wta",
+  "effective_stack_bb": 15,
+  "status": "RESEARCH_ONLY",
+  "policy": {
+    "raw_equity_fallback": false,
+    "stack_interpolation": false,
+    "postflop_provider_required": true,
+    "measured_exploitability_required_for_promotion": true,
+    "per_hand_ev_required": true
+  },
+  "subgames": [
+    {
+      "id": "15_BTN_R2_SB_FOLD_BB_CALL",
+      "history": ["BTN_RAISE_TO_2", "SB_FOLD", "BB_CALL"],
+      "players_to_flop": ["BTN", "BB"],
+      "pot_bb": 4.5,
+      "behind_bb": {"BTN": 13.0, "BB": 13.0},
+      "effective_postflop_stack_bb": 13.0,
+      "spr": 2.8888888889,
+      "position": {"oop": "BB", "ip": "BTN"},
+      "range_source": "CURRENT_PREFLOP_ITERATION",
+      "continuation_status": "MISSING_PER_HAND_EV"
+    },
+    {
+      "id": "15_BTN_R2_SB_CALL_BB_CALL",
+      "history": ["BTN_RAISE_TO_2", "SB_CALL", "BB_CALL"],
+      "players_to_flop": ["BTN", "SB", "BB"],
+      "pot_bb": 6.0,
+      "behind_bb": {"BTN": 13.0, "SB": 13.0, "BB": 13.0},
+      "effective_postflop_stack_bb": 13.0,
+      "spr": 2.1666666667,
+      "position": {"multiway": true},
+      "range_source": "CURRENT_PREFLOP_ITERATION",
+      "continuation_status": "MULTIWAY_POSTFLOP_BACKEND_REQUIRED"
+    },
+    {
+      "id": "15_BTN_FOLD_SB_LIMP_BB_CHECK",
+      "history": ["BTN_FOLD", "SB_LIMP", "BB_CHECK"],
+      "players_to_flop": ["SB", "BB"],
+      "pot_bb": 2.0,
+      "behind_bb": {"SB": 14.0, "BB": 14.0},
+      "effective_postflop_stack_bb": 14.0,
+      "spr": 7.0,
+      "position": {"oop": "SB", "ip": "BB"},
+      "range_source": "CURRENT_PREFLOP_ITERATION",
+      "continuation_status": "MISSING_PER_HAND_EV"
+    },
+    {
+      "id": "15_BTN_FOLD_SB_R3_BB_CALL",
+      "history": ["BTN_FOLD", "SB_RAISE_TO_3", "BB_CALL"],
+      "players_to_flop": ["SB", "BB"],
+      "pot_bb": 6.0,
+      "behind_bb": {"SB": 12.0, "BB": 12.0},
+      "effective_postflop_stack_bb": 12.0,
+      "spr": 2.0,
+      "position": {"oop": "SB", "ip": "BB"},
+      "range_source": "CURRENT_PREFLOP_ITERATION",
+      "continuation_status": "MISSING_PER_HAND_EV"
+    }
+  ],
+  "fixed_point_loop": [
+    "initialize preflop strategy",
+    "derive reach-weighted ranges for each continuation subgame",
+    "solve each supported postflop subgame from scratch",
+    "collect per-hand continuation EVs",
+    "update preflop regrets/strategy",
+    "repeat until preflop strategy and continuation EVs stabilize",
+    "measure independent best-response/stability diagnostics",
+    "compare only after solve to external reference anchors"
+  ],
+  "known_limitation": "The BTN_R2_SB_CALL_BB_CALL leaf is three-way postflop. A heads-up postflop backend cannot price this leaf exactly; a separate multiway continuation model or multiway subgame solver is required."
+}

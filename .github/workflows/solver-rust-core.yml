@@ -1,0 +1,92 @@
+name: Rust Solver Core
+
+on:
+  push:
+    branches: [chat-aligned-v2]
+    paths:
+      - 'solver-rs/**'
+      - '!solver-rs/src/preflop_tree.rs'
+      - '!solver-rs/src/reference_tree_15bb.rs'
+      - '!solver-rs/src/tree_profile.rs'
+      - '!solver-rs/src/tree_catalog.rs'
+      - '!solver-rs/src/strategy_record.rs'
+      - '!solver-rs/src/continuation_registry.rs'
+      - '.github/workflows/solver-rust-core.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: rust-solver-core-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Rust core tests without duplicated slow convergence loops
+        working-directory: solver-rs
+        run: >-
+          cargo test --all --
+          --skip leduc_cfr::tests::trained_leduc_approaches_sequence_form_value
+          --skip holdem_river_cfr::tests::trained_river_strategy_has_low_independent_br_gap
+      - name: Run deterministic sparse convergence benchmark
+        working-directory: solver-rs
+        run: cargo run --release --bin restricted_sparse_bench
+      - name: Run one exact HU equity enumeration
+        working-directory: solver-rs
+        run: cargo run --release --bin exact_equity_smoke
+      - name: Run exact-payoff restricted convergence benchmark
+        working-directory: solver-rs
+        run: cargo run --release --bin restricted_exact_bench
+      - name: Run one exact three-way equity enumeration
+        working-directory: solver-rs
+        run: cargo run --release --bin exact_equity3_smoke
+      - name: Run exact three-way terminal leaf smoke
+        working-directory: solver-rs
+        run: cargo run --release --bin exact_leaf3_smoke
+      - name: Run exact heads-up terminal leaf smoke
+        working-directory: solver-rs
+        run: cargo run --release --bin exact_leaf_hu_smoke
+      - name: Run sampled versus exact equity cross-check
+        working-directory: solver-rs
+        run: cargo run --release --bin exact_sampled_crosscheck
+      - name: Run analytical matrix-game convergence benchmark
+        working-directory: solver-rs
+        run: cargo run --release --bin synthetic_matrix_bench
+      - name: Run canonical payoff census benchmark
+        working-directory: solver-rs
+        run: cargo run --release --bin canonical_payoff_census
+      - name: Run persisted payoff lookup equivalence smoke
+        working-directory: solver-rs
+        run: cargo run --release --bin payoff_lookup_smoke
+      - name: Run compute-missing payoff build smoke
+        working-directory: solver-rs
+        run: cargo run --release --bin payoff_build_smoke
+      - name: Run payoff manifest integrity smoke
+        working-directory: solver-rs
+        run: cargo run --release --bin payoff_manifest_smoke
+      - name: Run HU exact generation economics benchmark
+        working-directory: solver-rs
+        run: cargo run --release --bin hu_generation_economics
+      - name: Run persisted exact leaf equivalence smoke
+        working-directory: solver-rs
+        run: cargo run --release --bin persisted_leaf_smoke
+      - name: Run independent exact evaluator cross-check
+        working-directory: solver-rs
+        run: cargo run --release --bin independent_exact_eval_smoke
+      - name: Run broader persisted restricted solver benchmark
+        working-directory: solver-rs
+        run: cargo run --release --bin restricted_persisted_broad_bench
+      - name: Run bounded 12x12 persisted restricted solver benchmark
+        working-directory: solver-rs
+        run: cargo run --release --bin restricted_persisted_12x12_bench
+      - name: Run parallel HU payoff build equivalence smoke
+        working-directory: solver-rs
+        run: cargo run --release --bin payoff_parallel_build_smoke
+      - name: Run bounded 24x24 persisted restricted solver benchmark
+        working-directory: solver-rs
+        run: cargo run --release --bin restricted_persisted_24x24_bench

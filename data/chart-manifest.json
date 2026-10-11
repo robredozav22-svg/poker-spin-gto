@@ -1,0 +1,105 @@
+{
+  "schema_version": "2.0",
+  "recovered_project_baseline": {
+    "app": "V43_EFFECTIVE_STACK_ONLY",
+    "rfi_audit": "V41_ALL_CHARTS_REAUDIT",
+    "range_sanity_audit": "V42_ALL_RANGES_SANITY_AUDIT",
+    "tree_engine_baseline": "V37_LEGAL_PREFLOP_STATE_MACHINE",
+    "allin_legality_baseline": "V40_ASYMMETRIC_BRANCH_AUDIT"
+  },
+  "strategy_target": {
+    "game": "spin_and_go",
+    "players": 3,
+    "baseline_payout_profile": "WTA",
+    "stack_unit": "bb",
+    "visible_stack_model": "EFFECTIVE_STACK_ONLY",
+    "stack_step_bb": 0.5,
+    "use_case": "study_and_recorded_hand_review_only"
+  },
+  "policy": {
+    "primary_solver": "GTO Wizard Spin & Go",
+    "primary_solver_documented_regular_depth_max_bb": 33,
+    "primary_solver_documented_ante_depth_max_bb": 25,
+    "allow_interpolation": false,
+    "allow_unverified_ranges_in_app": false,
+    "require_previous_action_context": true,
+    "require_per_hand_action_frequencies_for_verified_exact": true,
+    "separate_multi_place_payout_icm_profile": true,
+    "source_grade_B_is_not_exact_solver_frequency": true,
+    "preserve_mixed_source_cells": true,
+    "no_silent_node_substitution": true,
+    "no_silent_asymmetric_to_equal_stack_promotion": true
+  },
+  "source_grades": {
+    "A": "explicit published structured range, approved exact export, or matching Nash source",
+    "B": "source-constrained public aggregate/envelope; mixed per-hand allocation reconstructed under explicit constraints; not exact solver frequency",
+    "M": "model/reference, asymmetric or nearest-depth proxy, or complex response without exact approved per-hand export",
+    "G": "exploit/legacy Gold/population adjustment",
+    "MISSING_EXACT": "legal branch exists but exact approved chart source is unavailable"
+  },
+  "sources": [
+    {
+      "tier": 1,
+      "name": "GTO Wizard Spin & Go",
+      "role": "primary_solver_reference",
+      "url": "https://gtowizard.com/",
+      "notes": "Regular Spin documented up to 33bb; Spin+Ante up to 25bb; multiple SB sizing trees; 600+ asymmetric stack situations documented."
+    },
+    {
+      "tier": 2,
+      "name": "PokerStars Learn Spin & Go",
+      "role": "explicit_public_call_nash_and_structure_crosscheck",
+      "url": "https://www.pokerstars.com/poker/learn/strategies/spin-go-preflop-in-the-big-blind/"
+    },
+    {
+      "tier": 3,
+      "name": "PreflopRanges.app Spin solved charts",
+      "role": "public_opening_aggregate_and_envelope_crosscheck",
+      "url": "https://preflopranges.app/charts/spins/"
+    },
+    {
+      "tier": 4,
+      "name": "GGPoker Spin & Gold",
+      "role": "format_rules_sanity_only",
+      "url": "https://ggpoker.com/poker-games/spin-gold/"
+    },
+    {
+      "tier": 5,
+      "name": "Legacy Gold / field model",
+      "role": "separate_exploit_layer_only"
+    }
+  ],
+  "existing_main_data_status": "INVALID_FOR_STRATEGY",
+  "audited_anchor_file": "data/source-verified-anchors.json",
+  "validator": "scripts/validate-chart-data.mjs",
+  "required_response_families": [
+    "SB_vs_BTN_raise",
+    "SB_vs_BTN_jam",
+    "BB_vs_BTN_raise_after_SB_fold",
+    "BB_vs_BTN_raise_after_SB_call",
+    "BB_vs_BTN_raise_after_SB_3bet",
+    "BB_vs_BTN_raise_after_SB_jam",
+    "BB_vs_BTN_limp_after_SB_action",
+    "BB_vs_BTN_jam",
+    "BB_vs_SB_raise",
+    "BB_vs_SB_limp",
+    "BB_vs_SB_jam",
+    "BTN_response_to_SB_3bet",
+    "BTN_response_to_SB_jam",
+    "BTN_response_to_BB_3bet",
+    "BTN_response_to_BB_jam",
+    "reopened_raise_and_short_allin_responses"
+  ],
+  "hard_invariants": [
+    "169 unique starting hand classes",
+    "1326 total starting combinations",
+    "all exact cell action frequencies sum to 100 percent",
+    "RFI aggregate combo totals equal the audited V41 targets",
+    "offsuit CALL cannot coexist with suited FOLD for the same ranks in call-vs-jam charts",
+    "mixed source cells remain mixed",
+    "no stack interpolation without an explicitly labelled proxy",
+    "no different action node substituted for a missing exact node",
+    "chart shown only on Hero decision states",
+    "missing exact source is surfaced instead of guessed"
+  ]
+}

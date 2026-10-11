@@ -1,0 +1,154 @@
+{
+  "benchmark_id": "spin15-wta-v1",
+  "status": "RESEARCH_ONLY",
+  "format": "spin3max",
+  "payout_profile": "WTA_CHIPEV",
+  "stack_profile": {
+    "btn_bb": 15,
+    "sb_bb": 15,
+    "bb_bb": 15,
+    "symmetric": true
+  },
+  "accuracy_policy_id": "spin-verified-exact-v1",
+  "target_tree_profile_id": null,
+  "target_tree_status": "MISSING_EXACT_TREE",
+  "primary_reference": {
+    "provider": "GTO_WIZARD",
+    "solution_family": null,
+    "exact_tree_locked": false,
+    "reference_artifact_id": null,
+    "reference_checksum": null,
+    "accuracy_metadata_status": "NOT_CAPTURED"
+  },
+  "independent_validation": {
+    "required": true,
+    "evaluator_profile_id": null,
+    "evaluator_source_id": null,
+    "minimum_repetitions": 3,
+    "status": "NOT_READY"
+  },
+  "promotion_requirements": {
+    "complete_tree_catalog": true,
+    "physical_combo_rows": 1326,
+    "postflop_continuation_artifacts_for_nonallin_paths": true,
+    "solver_run_evidence": true,
+    "deterministic_repeat": true,
+    "independent_accuracy_measurement": true,
+    "max_normalized_exploitability_fraction_of_pot_where_measurable": 0.0001
+  },
+  "required_node_families": [
+    {
+      "id": "BTN_FIRST_IN",
+      "hero": "BTN",
+      "history_family": [],
+      "tree_status": "SCREEN_REFERENCE_ONLY",
+      "strategy_status": "MISSING_EXACT",
+      "reference_status": "SCREEN_CROSSCHECK_AVAILABLE"
+    },
+    {
+      "id": "SB_FIRST_IN_AFTER_BTN_FOLD",
+      "hero": "SB",
+      "history_family": ["BTN_FOLD"],
+      "tree_status": "PARTIAL_REFERENCE",
+      "strategy_status": "MISSING_EXACT",
+      "reference_status": "NO_EXACT_REFERENCE_CAPTURED"
+    },
+    {
+      "id": "SB_VS_BTN_RAISE",
+      "hero": "SB",
+      "history_family": ["BTN_RAISE_EXACT_SIZE_FROM_TREE"],
+      "tree_status": "SCREEN_REFERENCE_ONLY",
+      "strategy_status": "MISSING_EXACT",
+      "reference_status": "SCREEN_CROSSCHECK_AVAILABLE"
+    },
+    {
+      "id": "SB_VS_BTN_JAM",
+      "hero": "SB",
+      "history_family": ["BTN_JAM"],
+      "tree_status": "MISSING_EXACT",
+      "strategy_status": "MISSING_EXACT",
+      "reference_status": "NO_EXACT_REFERENCE_CAPTURED"
+    },
+    {
+      "id": "BB_VS_BTN_RAISE_AFTER_SB_FOLD",
+      "hero": "BB",
+      "history_family": ["BTN_RAISE_EXACT_SIZE_FROM_TREE", "SB_FOLD"],
+      "tree_status": "MISSING_EXACT",
+      "strategy_status": "MISSING_EXACT",
+      "reference_status": "NO_EXACT_REFERENCE_CAPTURED"
+    },
+    {
+      "id": "BB_VS_BTN_RAISE_AFTER_SB_CALL",
+      "hero": "BB",
+      "history_family": ["BTN_RAISE_EXACT_SIZE_FROM_TREE", "SB_CALL"],
+      "tree_status": "SCREEN_REFERENCE_ONLY",
+      "strategy_status": "MISSING_EXACT",
+      "reference_status": "SCREEN_CROSSCHECK_AVAILABLE"
+    },
+    {
+      "id": "BB_VS_BTN_JAM",
+      "hero": "BB",
+      "history_family": ["BTN_JAM", "SB_ACTION_FROM_EXACT_TREE"],
+      "tree_status": "MISSING_EXACT",
+      "strategy_status": "MISSING_EXACT",
+      "reference_status": "NO_EXACT_REFERENCE_CAPTURED"
+    },
+    {
+      "id": "BB_VS_SB_RAISE",
+      "hero": "BB",
+      "history_family": ["BTN_FOLD", "SB_RAISE_EXACT_SIZE_FROM_TREE"],
+      "tree_status": "SCREEN_REFERENCE_ONLY",
+      "strategy_status": "MISSING_EXACT",
+      "reference_status": "SCREEN_CROSSCHECK_AVAILABLE"
+    },
+    {
+      "id": "BB_VS_SB_LIMP",
+      "hero": "BB",
+      "history_family": ["BTN_FOLD", "SB_LIMP"],
+      "tree_status": "MISSING_EXACT",
+      "strategy_status": "MISSING_EXACT",
+      "reference_status": "NO_EXACT_REFERENCE_CAPTURED"
+    },
+    {
+      "id": "BB_VS_SB_JAM",
+      "hero": "BB",
+      "history_family": ["BTN_FOLD", "SB_JAM"],
+      "tree_status": "MISSING_EXACT",
+      "strategy_status": "MISSING_EXACT",
+      "reference_status": "NO_EXACT_REFERENCE_CAPTURED"
+    },
+    {
+      "id": "BTN_RESPONSE_TO_SB_3BET_OR_JAM",
+      "hero": "BTN",
+      "history_family": ["BTN_RAISE_EXACT_SIZE_FROM_TREE", "SB_3BET_OR_JAM", "BB_ACTION_IF_REQUIRED"],
+      "tree_status": "MISSING_EXACT",
+      "strategy_status": "MISSING_EXACT",
+      "reference_status": "NO_EXACT_REFERENCE_CAPTURED"
+    },
+    {
+      "id": "BTN_RESPONSE_TO_BB_3BET_OR_JAM",
+      "hero": "BTN",
+      "history_family": ["BTN_RAISE_EXACT_SIZE_FROM_TREE", "SB_ACTION", "BB_3BET_OR_JAM"],
+      "tree_status": "MISSING_EXACT",
+      "strategy_status": "MISSING_EXACT",
+      "reference_status": "NO_EXACT_REFERENCE_CAPTURED"
+    },
+    {
+      "id": "SB_RESPONSE_AFTER_BB_JAM_WHERE_APPLICABLE",
+      "hero": "SB",
+      "history_family": ["BTN_ACTION", "SB_ACTION", "BB_JAM"],
+      "tree_status": "MISSING_EXACT",
+      "strategy_status": "MISSING_EXACT",
+      "reference_status": "NO_EXACT_REFERENCE_CAPTURED"
+    }
+  ],
+  "claim_status": "NOT_ALLOWED",
+  "claim_blockers": [
+    "exact GTO Wizard tree profile not captured",
+    "complete exact 15bb tree catalog not built",
+    "1326-combo exact strategy artifacts not available",
+    "postflop continuation artifacts not available for non-all-in paths",
+    "independent evaluator not registered",
+    "apples-to-apples superiority measurement not run"
+  ]
+}

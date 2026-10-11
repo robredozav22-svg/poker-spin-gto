@@ -1,0 +1,87 @@
+name: Chart Audit
+
+on:
+  push:
+    branches: [main, chat-aligned-v2]
+    paths:
+      - 'data/**'
+      - 'solver/**'
+      - 'tests/**'
+      - 'ui/**'
+      - 'app.js'
+      - 'scripts/validate-chart-data.mjs'
+      - 'scripts/validate-source-policy-2026.mjs'
+      - 'scripts/validate-exact-spin-nodes.mjs'
+      - 'scripts/validate-exact-index.cjs'
+      - 'scripts/validate-exact-promotion.cjs'
+      - 'scripts/validate-crosscheck-profiles.mjs'
+      - 'scripts/build-exact-index-entry.cjs'
+      - 'scripts/build-promotion-candidate.cjs'
+      - 'scripts/import-gtowizard-upi-node.mjs'
+      - 'scripts/test-gtowizard-upi-zero-reach.mjs'
+      - 'scripts/test-exact-promotion-pipeline.mjs'
+      - 'scripts/audit-2026-crosschecks.mjs'
+      - 'scripts/audit-2026-hand-spotchecks.mjs'
+      - 'scripts/report-chart-coverage.mjs'
+      - 'scripts/validate-benchmark-manifest.mjs'
+      - '.github/workflows/chart-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-charts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate chart data
+        run: node scripts/validate-chart-data.mjs
+      - name: Validate 2026 source policy invariants
+        run: node scripts/validate-source-policy-2026.mjs
+      - name: Validate 2026 cross-check provenance and source usage
+        run: node scripts/validate-crosscheck-profiles.mjs
+      - name: Self-test GTO Wizard exact importer
+        run: node scripts/import-gtowizard-upi-node.mjs --self-test
+      - name: Verify zero-reach hands remain unreachable
+        run: node scripts/test-gtowizard-upi-zero-reach.mjs
+      - name: Run end-to-end exact promotion pipeline
+        run: node scripts/test-exact-promotion-pipeline.mjs
+      - name: Validate exact Spin nodes
+        run: node scripts/validate-exact-spin-nodes.mjs
+      - name: Validate exact runtime index routes and checksums
+        run: node scripts/validate-exact-index.cjs
+      - name: Test exact runtime store integrity
+        run: node tests/test_exact_store.js
+      - name: Self-test exact promotion gate
+        run: node scripts/validate-exact-promotion.cjs --self-test
+      - name: Validate exact promotion manifest
+        run: node scripts/validate-exact-promotion.cjs
+      - name: Self-test 2026 cross-check classifier
+        run: node scripts/audit-2026-crosschecks.mjs --self-test
+      - name: Audit 2026 cross-check compatibility and disagreements
+        run: node scripts/audit-2026-crosschecks.mjs
+      - name: Self-test hand-level 2026 spot-check classifier
+        run: node scripts/audit-2026-hand-spotchecks.mjs --self-test
+      - name: Audit hand-level 2026 spot checks
+        run: node scripts/audit-2026-hand-spotchecks.mjs
+      - name: Report exact chart coverage
+        run: node scripts/report-chart-coverage.mjs
+      - name: Test exact UI grid
+        run: node tests/test_ui_grid.js
+      - name: Test UI router
+        run: node tests/test_ui_router.js
+      - name: Validate benchmark manifests
+        run: node scripts/validate-benchmark-manifest.mjs
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run solver tests
+        run: python -m unittest discover -s tests -p 'test_solver.py' -v
